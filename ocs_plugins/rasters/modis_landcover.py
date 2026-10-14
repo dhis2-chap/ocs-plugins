@@ -26,7 +26,10 @@ from open_climate_service.streaming import BaseDatasetPlugin
 from ocs_plugins.rasters.earthdata import cmr_granules, data_links, download, earthdata_session
 
 _SHORT_NAME = "MCD12Q1"
+_VERSION = "061"
 _FIELD = "LC_Type1"
+# A small land area every year's product covers, to find the latest published year.
+_PROBE_BBOX = [29.5, -2.0, 29.6, -1.9]
 _FILL = 255
 _FIRST_YEAR = 2001
 
@@ -43,6 +46,20 @@ def _tile_index(title: str) -> tuple[int, int]:
     if match is None:
         raise RuntimeError(f"Cannot read the sinusoidal tile from granule {title!r}")
     return int(match.group(1)), int(match.group(2))
+
+
+def _latest_year() -> int | None:
+    """The latest year with a published MCD12Q1 v061 map, from CMR."""
+    from datetime import UTC, datetime
+
+    this_year = datetime.now(UTC).year
+    granules = cmr_granules(
+        _SHORT_NAME,
+        (f"{this_year - 5}-01-01T00:00:00Z", f"{this_year}-12-31T23:59:59Z"),
+        bbox=_PROBE_BBOX,
+        version=_VERSION,
+    )
+    return max((int(granule["time_start"][:4]) for granule in granules), default=None)
 
 
 def _read_classes(path: Path) -> np.ndarray:
@@ -81,7 +98,13 @@ class MODISLandCoverPlugin(BaseDatasetPlugin):
         self.resolution = float(resolution)
 
     async def periods(self, start: str, end: str) -> list[str]:
-        first, last = max(int(start[:4]), _FIRST_YEAR), int(end[:4])
+        import asyncio
+
+        # Each year's map is published well after the year ends, so stop at the latest one out.
+        latest = await asyncio.to_thread(_latest_year)
+        if latest is None:
+            return []
+        first, last = max(int(start[:4]), _FIRST_YEAR), min(int(end[:4]), latest)
         return [str(year) for year in range(first, last + 1)]
 
     def fetch_period(self, period_id: str, bbox: list[float], **_: Any) -> xr.Dataset:
@@ -91,7 +114,9 @@ class MODISLandCoverPlugin(BaseDatasetPlugin):
         from rasterio.warp import Resampling, reproject
 
         year = period_id[:4]
-        granules = cmr_granules(_SHORT_NAME, (f"{year}-01-01T00:00:00Z", f"{year}-01-01T23:59:59Z"), bbox=bbox)
+        granules = cmr_granules(
+            _SHORT_NAME, (f"{year}-01-01T00:00:00Z", f"{year}-01-01T23:59:59Z"), bbox=bbox, version=_VERSION
+        )
         if not granules:
             raise RuntimeError(f"No MCD12Q1 land cover for {year} over {bbox}")
 

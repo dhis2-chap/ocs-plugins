@@ -32,8 +32,16 @@ def archive(monkeypatch: pytest.MonkeyPatch) -> dict[str, np.ndarray]:
     """Granule title -> class array; CMR lists them and the download writes them."""
     files: dict[str, np.ndarray] = {}
 
-    def cmr(short_name: str, temporal: tuple[str, str], bbox: list[float] | None = None, **_: Any) -> list[dict]:
-        return [{"title": title, "links": [{"href": f"https://data.example/{title}.hdf"}]} for title in files]
+    def cmr(short_name: str, temporal: tuple[str, str], bbox: list[float] | None = None, **params: Any) -> list[dict]:
+        assert params.get("version") == "061"
+        return [
+            {
+                "title": title,
+                "time_start": f"{title[9:13]}-01-01T00:00:00.000Z",
+                "links": [{"href": f"https://data.example/{title}.hdf"}],
+            }
+            for title in files
+        ]
 
     def fetch(url: str, target: Path, session: Any = None) -> Path:
         _write(target, files[url.rsplit("/", 1)[-1].removesuffix(".hdf")])
@@ -94,3 +102,13 @@ def test_pixels_land_where_the_sinusoidal_grid_puts_them(archive: dict[str, np.n
 def test_a_year_without_granules_fails_clearly(archive: dict[str, np.ndarray]) -> None:
     with pytest.raises(RuntimeError, match="No MCD12Q1 land cover"):
         modis_landcover.MODISLandCoverPlugin().fetch_period("2024", BBOX)
+
+
+def test_years_stop_at_the_latest_published_map(archive: dict[str, np.ndarray]) -> None:
+    import asyncio
+
+    archive[_title(20)] = np.full((SIZE, SIZE), 9, dtype="uint8")  # the latest map is for 2024
+
+    years = asyncio.run(modis_landcover.MODISLandCoverPlugin().periods("2022", "2030"))
+
+    assert years == ["2022", "2023", "2024"]
