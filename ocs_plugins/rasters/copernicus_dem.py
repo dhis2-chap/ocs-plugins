@@ -73,12 +73,20 @@ class CopernicusDEMPlugin(BaseDatasetPlugin):
         return [_PERIOD] if int(start[:4]) <= int(_PERIOD) <= int(end[:4]) else []
 
     def _tiles_for(self, bbox: list[float]) -> list[str]:
-        west, south, east, north = bbox
-        names = (
-            _tile_name(self.code, lat, lon)
-            for lat in range(math.floor(south), math.ceil(north))
-            for lon in range(math.floor(west), math.ceil(east))
-        )
+        """The tiles holding the output's pixel centres.
+
+        A tile holds the centres from its west edge up to, not including, the next whole degree,
+        and from its north edge down to, not including, the next whole degree south. Output pixels
+        on a whole-degree edge of the extent therefore come from the neighbouring tile.
+        """
+        per_degree = round(1 / self.res)
+        west, south, east, north = _snap_outward(bbox, self.res)
+        # Pixel centres as whole multiples of the pixel size, to stay clear of rounding at tile edges.
+        first_col, last_col = round((west + self.res / 2) * per_degree), round((east - self.res / 2) * per_degree)
+        first_row, last_row = round((south + self.res / 2) * per_degree), round((north - self.res / 2) * per_degree)
+        lons = range(first_col // per_degree, last_col // per_degree + 1)
+        lats = range(-(-first_row // per_degree) - 1, -(-last_row // per_degree))
+        names = (_tile_name(self.code, lat, lon) for lat in lats for lon in lons)
         available = _available_tiles(self.bucket)
         return [name for name in names if name in available]
 

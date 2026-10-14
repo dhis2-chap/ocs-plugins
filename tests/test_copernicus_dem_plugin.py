@@ -110,3 +110,24 @@ def test_an_extent_with_no_tiles_fails_clearly(monkeypatch: pytest.MonkeyPatch) 
 def test_an_unknown_resolution_is_refused() -> None:
     with pytest.raises(ValueError, match="resolution must be one of"):
         copernicus_dem.CopernicusDEMPlugin(resolution=10)
+
+
+@pytest.mark.parametrize("resolution", [30, 90])
+def test_an_extent_on_whole_degrees_takes_its_edges_from_the_neighbouring_tiles(
+    local_bucket: Path, monkeypatch: pytest.MonkeyPatch, resolution: int
+) -> None:
+    # The pixel centres on 30 E belong to the E030 tile, and those on 2 S to the S03 tile.
+    tiles = [
+        _write_tile(local_bucket, resolution, lat, lon, value)
+        for lat, lon, value in [(-2, 29, 100.0), (-2, 30, 200.0), (-3, 29, 300.0), (-3, 30, 400.0)]
+    ]
+    _use_tiles(monkeypatch, tiles)
+
+    elevation = copernicus_dem.CopernicusDEMPlugin(resolution=resolution).fetch_period("2021", [29, -2, 30, -1])
+    elevation = elevation["elevation"].isel(t=0)
+
+    assert not np.isnan(elevation).any()
+    assert float(elevation.sel(x=29.5, y=-1.5, method="nearest")) == 100.0
+    assert (elevation.isel(x=-1, y=slice(0, -1)) == 200.0).all()  # the 30 E column
+    assert (elevation.isel(y=-1, x=slice(0, -1)) == 300.0).all()  # the 2 S row
+    assert float(elevation.isel(x=-1, y=-1)) == 400.0
