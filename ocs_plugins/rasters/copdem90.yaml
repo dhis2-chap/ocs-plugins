@@ -25,16 +25,16 @@
   standard_name: surface_altitude
   units: m
   resolution: 90 m x 90 m
-  source: Copernicus DEM GLO-90 (Microsoft Planetary Computer)
-  source_url: https://planetarycomputer.microsoft.com/dataset/cop-dem-glo-90
+  source: Copernicus DEM GLO-90 (AWS Open Data)
+  source_url: https://registry.opendata.aws/copernicus-dem/
   license:
     name: Licence to Use Copernicus DEM
     url: https://spacedata.copernicus.eu/documents/20123/121286/CSCDA_ESA_Mission-specific+Annex_31_Oct_22.pdf
   providers:
     - name: Copernicus
       url: https://www.copernicus.eu/
-    - name: Microsoft Planetary Computer
-      url: https://planetarycomputer.microsoft.com/
+    - name: AWS Open Data
+      url: https://registry.opendata.aws/copernicus-dem/
   display:
     colormap: viridis
     range: [0, 2000]
