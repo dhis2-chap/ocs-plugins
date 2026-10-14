@@ -18,24 +18,27 @@ RES = 1 / 360
 BBOX = [29.0, -2.0, 29.1, -1.9]  # 36 x 36 native pixels
 
 
-def _land_cover(codes: np.ndarray) -> xr.Dataset:
+def _land_cover(codes: np.ndarray, fill: int | None = None) -> xr.Dataset:
     height, width = codes.shape
     lat = -1.9 - (np.arange(height) + 0.5) * RES  # north to south, as delivered
     lon = 29.0 + (np.arange(width) + 0.5) * RES
-    return xr.Dataset(
+    ds = xr.Dataset(
         {
             "lccs_class": (("time", "lat", "lon"), codes[np.newaxis].astype("uint8")),
             "crs": ((), np.int32(0)),
         },
         coords={"time": [np.datetime64("2022-01-01")], "lat": lat, "lon": lon},
     )
+    if fill is not None:
+        ds["lccs_class"].encoding["_FillValue"] = np.uint8(fill)
+    return ds
 
 
 class FakeCds:
     """Stands in for the CDS client: records requests and writes the given land cover."""
 
-    def __init__(self, codes: np.ndarray, *, zipped: bool) -> None:
-        self.codes, self.zipped, self.requests = codes, zipped, []
+    def __init__(self, codes: np.ndarray, *, zipped: bool, fill: int | None = None) -> None:
+        self.codes, self.zipped, self.fill, self.requests = codes, zipped, fill, []
 
     def __call__(self) -> "FakeCds":
         return self
@@ -46,7 +49,7 @@ class FakeCds:
 
     def download(self, target: str) -> None:
         nc = Path(target).with_suffix(".nc")
-        _land_cover(self.codes).to_netcdf(nc)
+        _land_cover(self.codes, self.fill).to_netcdf(nc)
         if self.zipped:
             with zipfile.ZipFile(target, "w") as archive:
                 archive.write(nc, "C3S-LC-L4-LCCS-Map-300m-P1Y-2022-v2.1.1.area-subset.nc")
@@ -111,3 +114,28 @@ def test_years_stop_at_the_last_published_map() -> None:
     years = asyncio.run(esa_cci_lc.ESACCILandCoverClassPlugin().periods("2020", "2026"))
 
     assert years == ["2020", "2021", "2022"]
+
+
+def test_a_declared_fill_value_is_left_out_of_the_fractions(monkeypatch: pytest.MonkeyPatch) -> None:
+    codes = np.full((36, 36), 10, dtype="uint8")
+    codes[0, :] = 255  # missing, declared as the file's _FillValue
+    codes[:6, :6] = 255  # one whole output cell missing
+    monkeypatch.setattr(esa_cci_lc, "_CdsClient", FakeCds(codes, zipped=True, fill=255))
+
+    fractions = esa_cci_lc.ESACCILandCoverFractionPlugin(block=6).fetch_period("2022", BBOX)["land_cover_fraction"]
+    cropland = fractions.isel(t=0).sel(land_cover_class="cropland")
+
+    assert np.isnan(cropland.isel(y=0, x=0))  # nothing observed in that cell
+    assert np.allclose(cropland.isel(y=0, x=slice(1, None)), 1.0)  # 5 of 6 rows observed, all cropland
+    classes = esa_cci_lc.ESACCILandCoverClassPlugin().fetch_period("2022", BBOX)["lccs_class"].isel(t=0)
+    assert np.isnan(classes.isel(y=0)).all()
+
+
+@pytest.mark.parametrize("shape", [(1, 36), (36, 1)], ids=["one-row", "one-column"])
+def test_an_extent_one_pixel_wide_keeps_both_axes(monkeypatch: pytest.MonkeyPatch, shape: tuple[int, int]) -> None:
+    monkeypatch.setattr(esa_cci_lc, "_CdsClient", FakeCds(np.full(shape, 130, dtype="uint8"), zipped=False))
+
+    classes = esa_cci_lc.ESACCILandCoverClassPlugin().fetch_period("2022", BBOX)["lccs_class"].isel(t=0)
+
+    assert classes.dims == ("y", "x") and classes.shape == shape
+    assert (classes == 130).all()

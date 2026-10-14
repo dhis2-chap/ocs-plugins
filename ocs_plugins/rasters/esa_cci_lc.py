@@ -88,7 +88,13 @@ def _load_classes(year: str, bbox: list[float], pad: float = 0.0) -> xr.DataArra
         else:
             path = target
         ds = load_netcdf(path)
-    classes = ds["lccs_class"].squeeze(drop=True)
+    classes = ds["lccs_class"]
+    # Drop only the yearly time axis: an extent one pixel wide must keep both spatial axes.
+    if "time" in classes.dims:
+        classes = classes.isel(time=0, drop=True)
+    # A declared fill value is decoded to NaN; make it the class code for no data, so the fractions
+    # leave it out of the denominator instead of counting it as observed and unclassified.
+    classes = classes.fillna(_NO_DATA).astype("uint8")
     classes = classes.rename({"lat": "y", "lon": "x"}).sortby("y", ascending=False)
     classes = classes.drop_vars([name for name in classes.coords if name not in ("x", "y")])
     classes.attrs = {}
