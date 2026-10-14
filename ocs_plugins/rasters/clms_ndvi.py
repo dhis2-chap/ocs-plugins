@@ -10,6 +10,7 @@ Values 0-250 are NDVI (``0.004 * value - 0.08``, from the file's scale and offse
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, cast
 
 import numpy as np
@@ -27,7 +28,8 @@ class CLMSNDVIDekadalPlugin(BaseDatasetPlugin):
     """Dekadal NDVI from the CLMS global 300 m V3 product."""
 
     async def periods(self, start: str, end: str) -> list[str]:
-        latest = _clms.search(_COLLECTION, sortby="-datetime", limit=1)
+        # The catalogue lookup is a blocking HTTP call; keep it off the event loop.
+        latest = await asyncio.to_thread(_clms.search, _COLLECTION, sortby="-datetime", limit=1)
         if not latest:
             return []
         return dekad_period_ids(start, end, cutoff=latest[0]["properties"]["start_datetime"][:10])
