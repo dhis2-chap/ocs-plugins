@@ -65,6 +65,7 @@ which take precedence over the built-ins.
 | `imerg_precipitation_daily` | daily | NASA GPM IMERG v07, Final then Late run (GES DISC) | Earthdata Login |
 | `modis_flood_daily` | daily | NASA LANCE MODIS near-real-time flood (MCDWD), about the last 7 days only | Earthdata Login |
 | `modis_ndvi_monthly`, `modis_evi_monthly` | monthly | MODIS MOD13Q1/MYD13Q1 v6.1 (Microsoft Planetary Computer) | none |
+| `esa_worldcover_2021` | yearly | ESA WorldCover 10 m land cover, 2021 (AWS Open Data) | none |
 | `esacci_landcover_fraction_yearly`, `esacci_landcover_class_yearly` | yearly | ESA CCI / C3S land cover, 1992–2020 (Microsoft Planetary Computer) | none |
 | `copdem90_elevation_static` | static | Copernicus DEM GLO-90 (Microsoft Planetary Computer) | none |
 
@@ -95,7 +96,7 @@ is first ingested and needs a daily sync to grow; and **MODIS science collection
 
   For IMERG, also approve the *NASA GESDISC DATA ARCHIVE* application in your Earthdata profile.
   An `EARTHDATA_TOKEN` environment variable is used instead of `~/.netrc` when set.
-- **Microsoft Planetary Computer:** no account needed.
+- **Microsoft Planetary Computer** and **AWS Open Data:** no account needed.
 
 ## Develop
 
