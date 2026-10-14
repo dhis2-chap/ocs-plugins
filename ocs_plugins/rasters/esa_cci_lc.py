@@ -1,4 +1,4 @@
-"""ESA CCI / C3S land cover (300 m, yearly) from Microsoft Planetary Computer.
+"""ESA CCI / C3S land cover (300 m, yearly) from the Copernicus Climate Data Store (CDS).
 
 Two plugins over the same source:
 
@@ -15,22 +15,28 @@ Two plugins over the same source:
 The groups follow the IPCC land categories the CCI user guide maps LCCS classes onto, with
 shrubland, sparse vegetation and bare areas kept apart because they matter in drylands.
 
-Planetary Computer serves 1992-2020 and needs no account. The C3S continuation (2016-2022)
-is on the CDS as ``satellite-land-cover`` if more recent years are needed.
+The CDS serves the maps as ``satellite-land-cover``: version 2.0.7 for 1992-2015 and the C3S
+continuation, version 2.1.1, from 2016. Each year is requested for the extent only. Requests need
+a CDS key (see the README) and the dataset's licence accepted once in the browser; they queue
+on the CDS, so one year can take several minutes.
 """
 
 from __future__ import annotations
 
+import tempfile
+import zipfile
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import xarray as xr
+from ecmwf.datastores import Client as _CdsClient
 from open_climate_service.streaming import BaseDatasetPlugin
 
-_STAC_URL = "https://planetarycomputer.microsoft.com/api/stac/v1"
-_COLLECTION = "esa-cci-lc"
-_FIRST_YEAR, _LAST_YEAR = 1992, 2020
-_RESOLUTION = 1 / 360  # 10 arc-seconds, the native grid
+from ocs_plugins._netcdf import load_netcdf
+
+_DATASET = "satellite-land-cover"
+_FIRST_YEAR, _LAST_YEAR = 1992, 2022
 _NO_DATA = 0
 
 # Class group -> LCCS codes. Every code except 0 (no data) belongs to exactly one group.
@@ -54,28 +60,37 @@ def _years(start: str, end: str) -> list[str]:
     return [str(year) for year in range(first, last + 1)]
 
 
+def _cds_version(year: int) -> str:
+    return "v2_0_7cds" if year <= 2015 else "v2_1_1"
+
+
 def _load_classes(year: str, bbox: list[float], pad: float = 0.0) -> xr.DataArray:
     """The ``lccs_class`` raster for ``year`` on the native grid over ``bbox`` (+ ``pad`` degrees)."""
-    import odc.stac
-    import planetary_computer
-    import pystac_client
-
     xmin, ymin, xmax, ymax = (bbox[0] - pad, bbox[1] - pad, bbox[2] + pad, bbox[3] + pad)
-    catalog = pystac_client.Client.open(_STAC_URL, modifier=planetary_computer.sign_inplace)
-    items = list(catalog.search(collections=[_COLLECTION], bbox=[xmin, ymin, xmax, ymax], datetime=year).items())
-    if not items:
-        raise RuntimeError(f"No {_COLLECTION} tiles for {year} over {bbox}")
-    loaded = odc.stac.load(
-        items,
-        bands=["lccs_class"],
-        crs="EPSG:4326",
-        resolution=_RESOLUTION,
-        bbox=(xmin, ymin, xmax, ymax),
-        chunks={"x": 4096, "y": 4096},
-        resampling="nearest",
-    )
-    classes = loaded["lccs_class"].isel(time=0, drop=True).compute()
-    classes = classes.rename({"latitude": "y", "longitude": "x"}).drop_vars("spatial_ref", errors="ignore")
+    request = {
+        "variable": "all",
+        "year": [year],
+        "version": [_cds_version(int(year))],
+        "area": [ymax, xmin, ymin, xmax],
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "land_cover"
+        _CdsClient().submit(_DATASET, request).download(str(target))
+        # The CDS delivers a zip holding one netCDF file, or the netCDF file itself.
+        if zipfile.is_zipfile(target):
+            with zipfile.ZipFile(target) as archive:
+                names = [name for name in archive.namelist() if name.endswith(".nc")]
+                if not names:
+                    raise RuntimeError(
+                        f"No netCDF file in the CDS land cover download for {year}: {archive.namelist()}"
+                    )
+                path = Path(archive.extract(names[0], tmp))
+        else:
+            path = target
+        ds = load_netcdf(path)
+    classes = ds["lccs_class"].squeeze(drop=True)
+    classes = classes.rename({"lat": "y", "lon": "x"}).sortby("y", ascending=False)
+    classes = classes.drop_vars([name for name in classes.coords if name not in ("x", "y")])
     classes.attrs = {}
     return classes
 
