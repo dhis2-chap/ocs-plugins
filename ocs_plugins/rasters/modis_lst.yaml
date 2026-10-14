@@ -1,0 +1,36 @@
+- id: modis_lst_day_daily
+  name: Land surface temperature, day (MODIS Terra, daily)
+  short_name: LST (day)
+  description: >-
+    How hot the ground is in the late morning, at 1 km, worldwide, daily from 24 February 2000,
+    in degrees Celsius, from MODIS Terra (MOD11A1). Hotter than the air by day, especially on
+    bare and built-up land. Observed only under clear sky, so cloudy days leave cells empty; only
+    good-quality values with an error of at most 2 K are kept. MODIS science collection ends in
+    2027, so the record stops then. Needs an Earthdata Login.
+  standard_name: surface_temperature
+  variable: lst_day
+  period_type: daily
+  sync:
+    kind: temporal
+    execution: append
+  extents:
+    spatial:
+      bbox: [-180, -90, 180, 90]
+    temporal:
+      begin: "2000-02-24"
+      resolution: P1D
+  ingestion:
+    plugin: ocs_plugins.rasters.modis_lst.MODISLSTDayPlugin
+  units: degC
+  resolution: 1 km x 1 km
+  source: MODIS Terra MOD11A1 v061 (NASA LP DAAC)
+  source_url: https://www.earthdata.nasa.gov/data/catalog/lpcloud-mod11a1-061
+  license:
+    name: NASA Earth Science Data
+    url: https://www.earthdata.nasa.gov/engage/open-data-services-software-policies/data-use-guidance
+  providers:
+    - name: NASA LP DAAC
+      url: https://www.earthdata.nasa.gov/centers/lp-daac
+  display:
+    colormap: rdbu_r
+    range: [0.0, 50.0]
