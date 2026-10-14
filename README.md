@@ -129,5 +129,7 @@ and [Installable plugins](https://github.com/dhis2/open-climate-service/blob/mai
 
 ## Credits
 
-The plugins were written by Knut Rand ([@knutdrand](https://github.com/knutdrand)) for a
+Most of the plugins were written by Knut Rand ([@knutdrand](https://github.com/knutdrand)) for a
 climate–health use case, first proposed for OCS core in dhis2/open-climate-service#459–#464.
+The Copernicus Land Monitoring Service plugins (NDVI, GPP and NPP) are based on plugins written
+for the Uganda and Malawi climate service instances by Diana Nanyanzi and Yambanso.
