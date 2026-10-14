@@ -64,14 +64,14 @@ which take precedence over the built-ins.
 | `glofas_river_discharge_daily` | daily | GloFAS v4 historical (Copernicus EWDS) | CDS key, EWDS terms and licence accepted |
 | `imerg_precipitation_daily` | daily | NASA GPM IMERG v07, Final then Late run (GES DISC) | Earthdata Login |
 | `modis_flood_daily` | daily | NASA LANCE MODIS near-real-time flood (MCDWD), about the last 7 days only | Earthdata Login |
-| `modis_ndvi_monthly`, `modis_evi_monthly` | monthly | MODIS MOD13Q1/MYD13Q1 v6.1 (Microsoft Planetary Computer) | none |
+| `viirs_ndvi_monthly`, `viirs_evi_monthly` | monthly | VIIRS VNP13A1/VJ113A1/VJ213A1 v002, from 2012 (NASA LP DAAC) | Earthdata Login |
 | `esacci_landcover_fraction_yearly`, `esacci_landcover_class_yearly` | yearly | ESA CCI / C3S land cover, 1992–2020 (Microsoft Planetary Computer) | none |
 | `copdem90_elevation_static` | static | Copernicus DEM GLO-90 (Microsoft Planetary Computer) | none |
 
 Each template's `description` says more about the dataset, including its known limits. Two to
 note: **the MODIS flood product keeps only about the last 7 days**, so its record starts when it
 is first ingested and needs a daily sync to grow; and **MODIS science collection ends in 2027**
-(Terra early, Aqua late), so the MODIS datasets stop updating then.
+(Terra early, Aqua late), so the flood product stops updating then.
 
 ## Credentials
 
