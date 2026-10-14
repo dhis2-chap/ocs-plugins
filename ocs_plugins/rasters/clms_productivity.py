@@ -16,6 +16,7 @@ file's own scale factor.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import Any, cast
 
@@ -58,7 +59,8 @@ class CLMSProductivityDekadalPlugin(BaseDatasetPlugin):
         self.collection = _COLLECTIONS[product]
 
     async def periods(self, start: str, end: str) -> list[str]:
-        recent = _clms.search(self.collection, sortby="-datetime", limit=_RECENT_ITEMS)
+        # The catalogue lookup is a blocking HTTP call; keep it off the event loop.
+        recent = await asyncio.to_thread(_clms.search, self.collection, sortby="-datetime", limit=_RECENT_ITEMS)
         final = [item["properties"]["start_datetime"][:10] for item in recent if _rt(item) == _FINAL]
         if not final:
             return []
