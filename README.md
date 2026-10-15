@@ -65,7 +65,6 @@ which take precedence over the built-ins.
 | `modis_flood_daily` | daily | NASA LANCE MODIS near-real-time flood (MCDWD), about the last 7 days only | Earthdata Login |
 | `modis_lst_day_daily` | daily | MODIS Terra MOD11A1 v061 daytime land surface temperature, good-quality cells, from 2000 (NASA LP DAAC) | Earthdata Login |
 | `modis_ndvi_monthly`, `modis_evi_monthly` | monthly | MODIS MOD13Q1/MYD13Q1 v6.1 (Microsoft Planetary Computer) | none |
-| `chelsa_temperature_monthly` | monthly | CHELSA v2.1 temperature at 1 km, 1980–2021, no longer extended (WSL) | none |
 | `clms_ndvi_dekadal` | dekadal | Copernicus Land Monitoring Service NDVI 300 m V3, from 2014 (Copernicus Data Space Ecosystem) | CDSE S3 keys |
 | `clms_gpp_dekadal`, `clms_npp_dekadal` | dekadal | Copernicus Land Monitoring Service GPP and NPP 300 m V2, from November 2013, final values only (Copernicus Data Space Ecosystem) | CDSE S3 keys |
 | `esa_worldcover_2021` | yearly | ESA WorldCover 10 m land cover, 2021 (AWS Open Data) | none |
