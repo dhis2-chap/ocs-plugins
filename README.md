@@ -66,7 +66,7 @@ which take precedence over the built-ins.
 | `modis_flood_daily` | daily | NASA LANCE MODIS near-real-time flood (MCDWD), about the last 7 days only | Earthdata Login |
 | `modis_ndvi_monthly`, `modis_evi_monthly` | monthly | MODIS MOD13Q1/MYD13Q1 v6.1 (Microsoft Planetary Computer) | none |
 | `esacci_landcover_fraction_yearly`, `esacci_landcover_class_yearly` | yearly | ESA CCI / C3S land cover, 1992–2020 (Microsoft Planetary Computer) | none |
-| `copernicus_dem_elevation`, `copdem90_elevation_static` | static | Copernicus DEM GLO-30 and GLO-90 (AWS Open Data) | none |
+| `copdem90_elevation_static` | static | Copernicus DEM GLO-90 (AWS Open Data); the 30 m DEM is in OCS core | none |
 
 Each template's `description` says more about the dataset, including its known limits. Two to
 note: **the MODIS flood product keeps only about the last 7 days**, so its record starts when it

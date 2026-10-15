@@ -1,9 +1,9 @@
-"""Copernicus DEM GLO-30 and GLO-90 from the public AWS Open Data buckets (no account needed).
+"""Copernicus DEM GLO-90 from the public AWS Open Data bucket (no account needed).
 
-The 1x1 degree COG tiles are mosaicked and clipped to the extent on their native grid: 1
-arc-second (about 30 m) for GLO-30, 3 arc-seconds (about 90 m) for GLO-90, in EPSG:4326. Ocean
-areas have no tiles, so each bucket's `tileList.txt` decides which tiles to read, and cells
-without a tile are NaN. Only the windows inside the extent are read, over HTTP range requests.
+The 1x1 degree COG tiles are mosaicked and clipped to the extent on their native 3 arc-second
+(about 90 m) EPSG:4326 grid. Ocean areas have no tiles, so the bucket's `tileList.txt` decides
+which tiles to read, and cells without a tile are NaN. Only the windows inside the extent are
+read, over HTTP range requests. The 30 m DEM is in OCS core (``copdem30_elevation_static``).
 
 Tiles above 50 degrees latitude are stored with wider pixels in longitude; they are resampled
 bilinearly onto the common grid. The static dataset is represented as a single yearly period;
@@ -19,33 +19,30 @@ import numpy as np
 import xarray as xr
 from open_climate_service.streaming import BaseDatasetPlugin
 
-# Resolution in metres -> (bucket, tile name code, pixel size in degrees).
-_PRODUCTS = {
-    30: ("https://copernicus-dem-30m.s3.amazonaws.com", "10", 1 / 3600),
-    90: ("https://copernicus-dem-90m.s3.amazonaws.com", "30", 1 / 1200),
-}
+_BUCKET = "https://copernicus-dem-90m.s3.amazonaws.com"
+_RES = 1 / 1200
 _PERIOD = "2021"
 
 
-@lru_cache(maxsize=len(_PRODUCTS))
-def _available_tiles(bucket: str) -> frozenset[str]:
-    """Names of the tiles a bucket holds; ocean tiles are absent."""
-    with urllib.request.urlopen(f"{bucket}/tileList.txt", timeout=60) as response:
+@lru_cache(maxsize=1)
+def _available_tiles() -> frozenset[str]:
+    """Names of the tiles the bucket holds; ocean tiles are absent."""
+    with urllib.request.urlopen(f"{_BUCKET}/tileList.txt", timeout=60) as response:
         return frozenset(line.strip() for line in response.read().decode().splitlines() if line.strip())
 
 
-def _tile_name(code: str, lat: int, lon: int) -> str:
+def _tile_name(lat: int, lon: int) -> str:
     """The tile whose south-west corner is at ``lat``, ``lon`` (whole degrees)."""
     ns = f"N{lat:02d}" if lat >= 0 else f"S{-lat:02d}"
     ew = f"E{lon:03d}" if lon >= 0 else f"W{-lon:03d}"
-    return f"Copernicus_DSM_COG_{code}_{ns}_00_{ew}_00_DEM"
+    return f"Copernicus_DSM_COG_30_{ns}_00_{ew}_00_DEM"
 
 
-def _tile_path(bucket: str, name: str) -> str:
-    return f"/vsicurl/{bucket}/{name}/{name}.tif"
+def _tile_path(name: str) -> str:
+    return f"/vsicurl/{_BUCKET}/{name}/{name}.tif"
 
 
-def _snap_outward(bbox: list[float], res: float) -> tuple[float, float, float, float]:
+def _snap_outward(bbox: list[float], res: float = _RES) -> tuple[float, float, float, float]:
     """Widen ``bbox`` to the tiles' pixel edges, which sit half a pixel off whole degrees."""
     half = res / 2
     west, south, east, north = bbox
@@ -57,17 +54,10 @@ def _snap_outward(bbox: list[float], res: float) -> tuple[float, float, float, f
     )
 
 
-class CopernicusDEMPlugin(BaseDatasetPlugin):
-    """Streaming plugin for Copernicus DEM elevation.
+class CopDEM90Plugin(BaseDatasetPlugin):
+    """Streaming plugin for Copernicus DEM GLO-90 elevation."""
 
-    Template params:
-        resolution: 30 (GLO-30) or 90 (GLO-90, the default).
-    """
-
-    def __init__(self, resolution: int = 90, **_: Any) -> None:
-        if int(resolution) not in _PRODUCTS:
-            raise ValueError(f"{type(self).__name__}: resolution must be one of {list(_PRODUCTS)}, got {resolution!r}")
-        self.bucket, self.code, self.res = _PRODUCTS[int(resolution)]
+    res = _RES
 
     async def periods(self, start: str, end: str) -> list[str]:
         return [_PERIOD] if int(start[:4]) <= int(_PERIOD) <= int(end[:4]) else []
@@ -86,8 +76,8 @@ class CopernicusDEMPlugin(BaseDatasetPlugin):
         first_row, last_row = round((south + self.res / 2) * per_degree), round((north - self.res / 2) * per_degree)
         lons = range(first_col // per_degree, last_col // per_degree + 1)
         lats = range(-(-first_row // per_degree) - 1, -(-last_row // per_degree))
-        names = (_tile_name(self.code, lat, lon) for lat in lats for lon in lons)
-        available = _available_tiles(self.bucket)
+        names = (_tile_name(lat, lon) for lat in lats for lon in lons)
+        available = _available_tiles()
         return [name for name in names if name in available]
 
     def fetch_period(self, period_id: str, bbox: list[float], **_: Any) -> xr.Dataset:
@@ -100,7 +90,7 @@ class CopernicusDEMPlugin(BaseDatasetPlugin):
         if not tiles:
             raise RuntimeError(f"No Copernicus DEM tiles intersect {bbox}")
         with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", CPL_VSIL_CURL_ALLOWED_EXTENSIONS=".tif"):
-            sources = [rasterio.open(_tile_path(self.bucket, name)) for name in tiles]
+            sources = [rasterio.open(_tile_path(name)) for name in tiles]
             try:
                 mosaic, transform = rasterio.merge.merge(
                     sources,
