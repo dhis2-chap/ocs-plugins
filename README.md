@@ -59,7 +59,6 @@ which take precedence over the built-ins.
 | `era5land_dewpoint_daily` | daily | ERA5-Land daily statistics (Copernicus CDS) | CDS key |
 | `era5land_soil_moisture_daily` | daily | ERA5-Land daily statistics, layer 1, 0–7 cm (Copernicus CDS) | CDS key |
 | `era5land_wind_speed_daily` | daily | ERA5-Land hourly u/v, mean of hourly speeds (Copernicus CDS) | CDS key |
-| `era5heat_utci_max_daily`, `era5heat_utci_mean_daily` | daily | ERA5-HEAT UTCI (Copernicus CDS) | CDS key, dataset licence accepted |
 | `cams_dust_aod_daily`, `cams_pm10_daily`, `cams_pm25_daily` | daily | CAMS EAC4 reanalysis, then CAMS global forecasts (Copernicus ADS) | CDS key, ADS terms and licences accepted |
 | `glofas_river_discharge_daily` | daily | GloFAS v4 historical (Copernicus EWDS) | CDS key, EWDS terms and licence accepted |
 | `imerg_precipitation_daily` | daily | NASA GPM IMERG v07, Final then Late run (GES DISC) | Earthdata Login |
