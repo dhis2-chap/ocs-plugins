@@ -3,11 +3,7 @@
   short_name: Land cover
   description: >-
     Land cover class of each 500 m cell, worldwide, yearly from 2001, in the 17 IGBP classes of
-    MODIS MCD12Q1: 1 evergreen needleleaf forest, 2 evergreen broadleaf forest, 3 deciduous
-    needleleaf forest, 4 deciduous broadleaf forest, 5 mixed forest, 6 closed shrubland, 7 open
-    shrubland, 8 woody savanna, 9 savanna, 10 grassland, 11 permanent wetland, 12 cropland,
-    13 urban and built-up, 14 cropland and natural vegetation mosaic, 15 snow and ice, 16 barren,
-    17 water. MODIS science collection ends in 2027, so the record stops then. Needs an
+    MODIS MCD12Q1. MODIS science collection ends in 2027, so the record stops then. Needs an
     Earthdata Login.
   variable: land_cover
   period_type: yearly
@@ -23,6 +19,24 @@
   ingestion:
     plugin: ocs_plugins.rasters.modis_landcover.MODISLandCoverPlugin
     resampling: mode
+  classes:
+    - { value: 1, label: "Evergreen needleleaf forest", color: "#05450a" }
+    - { value: 2, label: "Evergreen broadleaf forest", color: "#086a10" }
+    - { value: 3, label: "Deciduous needleleaf forest", color: "#54a708" }
+    - { value: 4, label: "Deciduous broadleaf forest", color: "#78d203" }
+    - { value: 5, label: "Mixed forest", color: "#009900" }
+    - { value: 6, label: "Closed shrubland", color: "#c6b044" }
+    - { value: 7, label: "Open shrubland", color: "#dcd159" }
+    - { value: 8, label: "Woody savanna", color: "#dade48" }
+    - { value: 9, label: "Savanna", color: "#fbff13" }
+    - { value: 10, label: "Grassland", color: "#b6ff05" }
+    - { value: 11, label: "Permanent wetland", color: "#27ff87" }
+    - { value: 12, label: "Cropland", color: "#c24f44" }
+    - { value: 13, label: "Urban and built-up", color: "#a5a5a5" }
+    - { value: 14, label: "Cropland and natural vegetation mosaic", color: "#ff6d4c" }
+    - { value: 15, label: "Snow and ice", color: "#69fff8" }
+    - { value: 16, label: "Barren", color: "#f9ffa4" }
+    - { value: 17, label: "Water", color: "#1c0dff" }
   units: "1"
   resolution: 500 m x 500 m
   source: MODIS Terra and Aqua MCD12Q1 v061, IGBP classification (NASA LP DAAC)
