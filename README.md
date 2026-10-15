@@ -65,6 +65,7 @@ which take precedence over the built-ins.
 | `modis_flood_daily` | daily | NASA LANCE MODIS near-real-time flood (MCDWD), about the last 7 days only | Earthdata Login |
 | `modis_ndvi_monthly`, `modis_evi_monthly` | monthly | MODIS MOD13Q1/MYD13Q1 v6.1 (Microsoft Planetary Computer) | none |
 | `clms_ndvi_dekadal` | dekadal | Copernicus Land Monitoring Service NDVI 300 m V3, from 2014 (Copernicus Data Space Ecosystem) | CDSE S3 keys |
+| `clms_gpp_dekadal`, `clms_npp_dekadal` | dekadal | Copernicus Land Monitoring Service GPP and NPP 300 m V2, from November 2013, final values only (Copernicus Data Space Ecosystem) | CDSE S3 keys |
 | `esacci_landcover_fraction_yearly`, `esacci_landcover_class_yearly` | yearly | ESA CCI / C3S land cover, 1992–2020 (Microsoft Planetary Computer) | none |
 | `copdem90_elevation_static` | static | Copernicus DEM GLO-90 (Microsoft Planetary Computer) | none |
 
@@ -127,5 +128,7 @@ and [Installable plugins](https://github.com/dhis2/open-climate-service/blob/mai
 
 ## Credits
 
-The plugins were written by Knut Rand ([@knutdrand](https://github.com/knutdrand)) for a
+Most of the plugins were written by Knut Rand ([@knutdrand](https://github.com/knutdrand)) for a
 climate–health use case, first proposed for OCS core in dhis2/open-climate-service#459–#464.
+The Copernicus Land Monitoring Service GPP and NPP plugin is based on the ones written for the
+Uganda and Malawi climate service instances by Diana Nanyanzi and Yambanso.
