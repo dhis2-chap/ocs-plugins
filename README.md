@@ -64,6 +64,7 @@ which take precedence over the built-ins.
 | `imerg_precipitation_daily` | daily | NASA GPM IMERG v07, Final then Late run (GES DISC) | Earthdata Login |
 | `modis_flood_daily` | daily | NASA LANCE MODIS near-real-time flood (MCDWD), about the last 7 days only | Earthdata Login |
 | `modis_ndvi_monthly`, `modis_evi_monthly` | monthly | MODIS MOD13Q1/MYD13Q1 v6.1 (Microsoft Planetary Computer) | none |
+| `clms_ndvi_dekadal` | dekadal | Copernicus Land Monitoring Service NDVI 300 m V3, from 2014 (Copernicus Data Space Ecosystem) | CDSE S3 keys |
 | `esacci_landcover_fraction_yearly`, `esacci_landcover_class_yearly` | yearly | ESA CCI / C3S land cover, 1992–2020 (Microsoft Planetary Computer) | none |
 | `copdem90_elevation_static` | static | Copernicus DEM GLO-90 (Microsoft Planetary Computer) | none |
 
@@ -86,6 +87,16 @@ is first ingested and needs a daily sync to grow; and **MODIS science collection
   The same key works on the [ADS](https://ads.atmosphere.copernicus.eu) and the
   [EWDS](https://ewds.climate.copernicus.eu), but each portal's terms of use, and the licence of
   each dataset you use, must be accepted once in the browser. Until then requests fail with 403.
+- **Copernicus Data Space Ecosystem (CDSE):** free S3 keys, created at
+  https://eodata-s3keysmanager.dataspace.copernicus.eu after registering at
+  [dataspace.copernicus.eu](https://dataspace.copernicus.eu). Set `CDSE_S3_ACCESS_KEY` and
+  `CDSE_S3_SECRET_KEY`, or add them as a `[cdse]` profile in `~/.aws/credentials`:
+
+  ```
+  [cdse]
+  aws_access_key_id = <access key>
+  aws_secret_access_key = <secret key>
+  ```
 - **NASA Earthdata:** an [Earthdata Login](https://urs.earthdata.nasa.gov) in `~/.netrc`:
 
   ```
