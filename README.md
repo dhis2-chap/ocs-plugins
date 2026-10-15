@@ -115,6 +115,14 @@ is first ingested and needs a daily sync to grow; and **MODIS science collection
   own Google Cloud project at [code.earthengine.google.com/register](https://code.earthengine.google.com/register),
   as with the CDS. Set `EARTHENGINE_PROJECT` to that project's id. The client uses the credentials from
   `earthengine authenticate`, or a service account's key file in `GOOGLE_APPLICATION_CREDENTIALS`.
+
+  Check that the instance may use Earth Engine without charge before you register. The
+  [noncommercial terms](https://earthengine.google.com/noncommercial/) exclude a government agency's
+  repeated production of data products, such as a scheduled monthly sync, unless the agency is in a
+  Least Developed Country (UN list) or part of an Indigenous government. Other government
+  instances need a commercial Earth Engine licence. Non-profits may use it free of charge, but not
+  for work a government or company pays them for. The data itself is CC-BY 4.0, so a published
+  dataset can be shared with the attribution in its description.
 - **Microsoft Planetary Computer** and **AWS Open Data:** no account needed.
 
 ## Develop
