@@ -1,0 +1,40 @@
+- id: esa_worldcover_2021
+  name: Land cover (ESA WorldCover 10 m, 2021)
+  short_name: Land cover
+  description: >-
+    Land cover class of each 10 m cell, worldwide, for 2021, in the 11 ESA WorldCover classes:
+    10 tree cover, 20 shrubland, 30 grassland, 40 cropland, 50 built-up, 60 bare or sparse
+    vegetation, 70 snow and ice, 80 permanent water, 90 herbaceous wetland, 95 mangroves,
+    100 moss and lichen. 0 is no data. Needs no account. At 10 m a country is hundreds of millions
+    of cells, so ingesting it takes a while and the store is large.
+  variable: landcover
+  period_type: yearly
+  sync:
+    kind: release
+    execution: rematerialize
+    version:
+      value: v200
+      authority: esa-worldcover
+  extents:
+    spatial:
+      bbox: [-180, -60, 180, 84]
+    temporal:
+      begin: "2021"
+      end: "2021"
+      resolution: P1Y
+  ingestion:
+    plugin: ocs_plugins.rasters.worldcover.WorldCoverPlugin
+    resampling: mode
+  units: "1"
+  resolution: 10 m x 10 m
+  source: ESA WorldCover 2021 v200 (AWS Open Data)
+  source_url: https://esa-worldcover.org/en
+  license: CC-BY-4.0
+  providers:
+    - name: European Space Agency (ESA) WorldCover project
+      url: https://esa-worldcover.org/
+    - name: AWS Open Data
+      url: https://registry.opendata.aws/esa-worldcover-vito/
+  display:
+    colormap: viridis
+    range: [10, 100]
