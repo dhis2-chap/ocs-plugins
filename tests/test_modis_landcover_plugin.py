@@ -12,7 +12,7 @@ import pytest
 from pyhdf.SD import SD, SDC
 from pyproj import Transformer
 
-from ocs_plugins.rasters import modis_landcover
+from ocs_plugins.rasters import _modis, modis_landcover
 
 SIZE = 240  # pixels per tile side; real tiles have 2400, the reader takes it from the file
 V = 9
@@ -47,9 +47,14 @@ def archive(monkeypatch: pytest.MonkeyPatch) -> dict[str, np.ndarray]:
         _write(target, files[url.rsplit("/", 1)[-1].removesuffix(".hdf")])
         return target
 
-    monkeypatch.setattr(modis_landcover, "cmr_granules", cmr)
-    monkeypatch.setattr(modis_landcover, "download", fetch)
-    monkeypatch.setattr(modis_landcover, "earthdata_session", lambda: None)
+    monkeypatch.setattr(_modis, "cmr_granules", cmr)
+    monkeypatch.setattr(
+        _modis,
+        "latest_granule_start",
+        lambda short_name, version, bbox: max((f"{t[9:13]}-01-01" for t in files), default=None),
+    )
+    monkeypatch.setattr(_modis, "download", fetch)
+    monkeypatch.setattr(_modis, "earthdata_session", lambda: None)
     return files
 
 
@@ -90,12 +95,12 @@ def test_pixels_land_where_the_sinusoidal_grid_puts_them(archive: dict[str, np.n
     classes = modis_landcover.MODISLandCoverPlugin(resolution=0.05).fetch_period("2024", [29.0, -2.5, 29.8, -1.5])
     classes = classes["land_cover"].isel(t=0)
 
-    to_sinusoidal = Transformer.from_crs("EPSG:4326", modis_landcover._SINUSOIDAL, always_xy=True)
-    pixel = modis_landcover._TILE_SIZE / SIZE
+    to_sinusoidal = Transformer.from_crs("EPSG:4326", _modis.SINUSOIDAL, always_xy=True)
+    pixel = _modis.TILE_SIZE / SIZE
     for lon, lat in [(29.125, -1.625), (29.525, -1.975), (29.725, -2.425)]:
         x, y = to_sinusoidal.transform(lon, lat)
-        col = int((x - (modis_landcover._GRID_WEST + 20 * modis_landcover._TILE_SIZE)) // pixel)
-        row = int(((modis_landcover._GRID_NORTH - V * modis_landcover._TILE_SIZE) - y) // pixel)
+        col = int((x - (_modis.GRID_WEST + 20 * _modis.TILE_SIZE)) // pixel)
+        row = int(((_modis.GRID_NORTH - V * _modis.TILE_SIZE) - y) // pixel)
         assert float(classes.sel(x=lon, y=lat, method="nearest")) == tile[row, col]
 
 
