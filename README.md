@@ -69,7 +69,7 @@ which take precedence over the built-ins.
 | `clms_gpp_dekadal`, `clms_npp_dekadal` | dekadal | Copernicus Land Monitoring Service GPP and NPP 300 m V2, from November 2013, final values only (Copernicus Data Space Ecosystem) | CDSE S3 keys |
 | `modis_landcover_yearly` | yearly | MODIS MCD12Q1 v061 land cover, IGBP classes, from 2001 (NASA LP DAAC) | Earthdata Login |
 | `esacci_landcover_fraction_yearly`, `esacci_landcover_class_yearly` | yearly | ESA CCI / C3S land cover, 1992–2020 (Microsoft Planetary Computer) | none |
-| `copdem90_elevation_static` | static | Copernicus DEM GLO-90 (Microsoft Planetary Computer) | none |
+| `copdem90_elevation_static` | static | Copernicus DEM GLO-90 (AWS Open Data); the 30 m DEM is in OCS core | none |
 
 Each template's `description` says more about the dataset, including its known limits. Two to
 note: **the MODIS flood product keeps only about the last 7 days**, so its record starts when it
@@ -108,7 +108,7 @@ is first ingested and needs a daily sync to grow; and **MODIS science collection
 
   For IMERG, also approve the *NASA GESDISC DATA ARCHIVE* application in your Earthdata profile.
   An `EARTHDATA_TOKEN` environment variable is used instead of `~/.netrc` when set.
-- **Microsoft Planetary Computer:** no account needed.
+- **Microsoft Planetary Computer** and **AWS Open Data:** no account needed.
 
 ## Develop
 
