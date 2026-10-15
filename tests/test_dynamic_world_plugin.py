@@ -110,3 +110,22 @@ def test_a_missing_project_says_what_to_set(monkeypatch: pytest.MonkeyPatch) -> 
 
     with pytest.raises(RuntimeError, match="EARTHENGINE_PROJECT"):
         dynamic_world._ee()
+
+
+def test_a_service_account_key_is_passed_to_earth_engine(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The Earth Engine client does not read GOOGLE_APPLICATION_CREDENTIALS itself, so the plugin does."""
+    import sys
+
+    import google.auth
+
+    initialised: list[tuple[Any, str]] = []
+    fake_ee = SimpleNamespace(Initialize=lambda credentials, project: initialised.append((credentials, project)))
+    monkeypatch.setitem(sys.modules, "ee", fake_ee)
+    monkeypatch.setattr(google.auth, "default", lambda scopes: ("service-account", "from-key"))
+    monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "/keys/instance.json")
+    monkeypatch.setenv("EARTHENGINE_PROJECT", "instance-project")
+    monkeypatch.setattr(dynamic_world, "_initialised", False)
+
+    dynamic_world._ee()
+
+    assert initialised == [("service-account", "instance-project")]

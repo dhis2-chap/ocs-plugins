@@ -37,6 +37,7 @@ _NATIVE_METRES = 10
 _NO_DATA = 255
 _TILE = 4096  # cells per tile side: 16 MB of uint8, well within computePixels' 48 MB
 _WORKERS = 4
+_SCOPES = ["https://www.googleapis.com/auth/earthengine", "https://www.googleapis.com/auth/cloud-platform"]
 
 _init_lock = threading.Lock()
 _initialised = False
@@ -54,7 +55,14 @@ def _ee() -> Any:
                 raise RuntimeError(
                     "Dynamic World needs EARTHENGINE_PROJECT set to a Google Cloud project registered for Earth Engine"
                 )
-            ee.Initialize(project=project)
+            # The client does not read a service account key by itself: it only finds the
+            # credentials `earthengine authenticate` stored, so a key file is loaded here.
+            credentials = None
+            if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+                import google.auth
+
+                credentials, _ = google.auth.default(scopes=_SCOPES)
+            ee.Initialize(credentials, project=project)
             _initialised = True
     return ee
 
