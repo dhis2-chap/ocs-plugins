@@ -1,4 +1,4 @@
-"""CAMS global atmospheric composition (dust AOD, PM10) from the Copernicus Atmosphere Data Store.
+"""CAMS global atmospheric composition (dust AOD, PM10, PM2.5) from the Copernicus Atmosphere Data Store.
 
 History comes from the EAC4 reanalysis (``cams-global-reanalysis-eac4``, 3-hourly, 0.75 degrees,
 2003 to about a year ago). Days after the end of EAC4 come from the 00 UTC run of the CAMS
