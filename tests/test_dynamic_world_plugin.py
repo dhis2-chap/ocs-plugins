@@ -1,16 +1,19 @@
-"""Dynamic World: months offered, the grid and its tiles, and a month with no scenes.
+"""Dynamic World: months offered, the grid Xee is asked for, a month with no scenes, and credentials.
 
-Earth Engine is replaced by a stand-in that records the requests and answers `computePixels` with
-each tile's position, so the test checks that every tile lands where it belongs in the grid.
+Earth Engine and Xee are replaced by stand-ins: Earth Engine objects record the calls made on them,
+and `xr.open_dataset` records the grid it is asked to read and answers with values that differ by
+row and column, so the test checks that the grid is passed on and read back the right way round.
 """
 
 import asyncio
+import sys
 from datetime import date
 from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
 import pytest
+import xarray as xr
 
 from ocs_plugins.rasters import dynamic_world
 
@@ -33,28 +36,26 @@ class _Chain:
 
 
 def _fake_ee(monkeypatch: pytest.MonkeyPatch, scenes: int = 3) -> tuple[list[dict[str, Any]], list[str]]:
-    requests: list[dict[str, Any]] = []
+    reads: list[dict[str, Any]] = []
     calls: list[str] = []
     chain = _Chain(scenes, calls)
-
-    def compute_pixels(request: dict[str, Any]) -> np.ndarray:
-        requests.append(request)
-        grid = request["grid"]
-        width, height = grid["dimensions"]["width"], grid["dimensions"]["height"]
-        # Each tile is filled with a value from its column, so a misplaced tile shows.
-        column = round((grid["affineTransform"]["translateX"] - 30.0) / 0.001) // dynamic_world._TILE
-        values = np.full((height, width), column % 8, dtype="uint8")
-        return values.astype([("label_mode", "uint8")]).view(np.recarray)
-
     ee = SimpleNamespace(
         ImageCollection=lambda _: chain,
         Geometry=SimpleNamespace(Rectangle=lambda _: chain),
-        Projection=lambda _: chain,
-        Reducer=SimpleNamespace(mode=lambda: chain),
-        data=SimpleNamespace(computePixels=compute_pixels),
+        Date=lambda _: chain,
     )
     monkeypatch.setattr(dynamic_world, "_ee", lambda: ee)
-    return requests, calls
+
+    def open_dataset(collection: Any, **kwargs: Any) -> xr.Dataset:
+        reads.append(kwargs)
+        width, height = kwargs["shape_2d"]
+        # Row r, column c holds (r + 2c) % 9, as floats like Xee returns.
+        values = (np.arange(height)[:, None] + 2 * np.arange(width)[None, :]) % 9
+        label = xr.DataArray(values[None].astype("float32"), dims=("time", "y", "x"))
+        return xr.Dataset({"label": label})
+
+    monkeypatch.setattr(dynamic_world.xr, "open_dataset", open_dataset)
+    return reads, calls
 
 
 def test_months_are_complete_months_within_the_record() -> None:
@@ -67,41 +68,36 @@ def test_months_are_complete_months_within_the_record() -> None:
     assert this_month not in recent and recent[-1] < this_month
 
 
-def test_tiles_cover_the_grid_once_and_land_in_place(monkeypatch: pytest.MonkeyPatch) -> None:
-    requests, calls = _fake_ee(monkeypatch)
-    monkeypatch.setattr(dynamic_world, "_TILE", 100)
-    bbox = [30.0, -2.25, 30.25, -2.0]  # 250 x 250 cells at 0.001 degrees: 3 x 3 tiles
+def test_the_month_is_read_on_the_output_grid(monkeypatch: pytest.MonkeyPatch) -> None:
+    reads, calls = _fake_ee(monkeypatch)
+    bbox = [30.0, -2.25, 30.25, -2.0]  # 250 x 250 cells at 0.001 degrees
 
     ds = dynamic_world.DynamicWorldPlugin().fetch_period("2024-03", bbox)
 
+    assert reads == [
+        {
+            "engine": "ee",
+            "crs": "EPSG:4326",
+            "crs_transform": (0.001, 0, 30.0, 0, -0.001, -2.0),
+            "shape_2d": (250, 250),
+        }
+    ]
     landcover = ds["landcover"].isel(t=0)
-    assert landcover.shape == (250, 250)
-    assert len(requests) == 9
-    # Columns 0-99 came from tile column 0, 100-199 from 1, 200-249 from 2, in every row.
-    assert set(np.unique(landcover.values[:, :100])) == {0}
-    assert set(np.unique(landcover.values[:, 100:200])) == {1}
-    assert set(np.unique(landcover.values[:, 200:])) == {2}
+    assert landcover.dtype == np.uint8 and landcover.shape == (250, 250)
+    assert int(landcover[1, 0]) == 1 and int(landcover[0, 1]) == 2  # rows are y, columns are x
     assert float(landcover.x[0]) == pytest.approx(30.0005) and float(landcover.y[0]) == pytest.approx(-2.0005)
     assert ds["t"].values[0] == np.datetime64("2024-03-01")
-    # Coarser than 10 m, so each cell is the most frequent 10 m class within it.
-    assert "reduceResolution" in calls
+    # Requested at the output grid directly: no 10 m aggregation of the month, which runs out of memory.
+    assert "mode" in calls and "reduceResolution" not in calls
 
 
 def test_a_month_without_scenes_is_no_data(monkeypatch: pytest.MonkeyPatch) -> None:
-    requests, _ = _fake_ee(monkeypatch, scenes=0)
+    reads, _ = _fake_ee(monkeypatch, scenes=0)
 
     ds = dynamic_world.DynamicWorldPlugin().fetch_period("2015-07", [30.0, -2.01, 30.01, -2.0])
 
-    assert not requests
+    assert not reads
     assert set(np.unique(ds["landcover"].values)) == {255}
-
-
-def test_native_resolution_skips_the_aggregation(monkeypatch: pytest.MonkeyPatch) -> None:
-    _, calls = _fake_ee(monkeypatch)
-
-    dynamic_world.DynamicWorldPlugin(pixel_degrees=0.0001).fetch_period("2024-03", [30.0, -2.001, 30.001, -2.0])
-
-    assert "reduceResolution" not in calls
 
 
 def test_a_missing_project_says_what_to_set(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -114,12 +110,12 @@ def test_a_missing_project_says_what_to_set(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_a_service_account_key_is_passed_to_earth_engine(monkeypatch: pytest.MonkeyPatch) -> None:
     """The Earth Engine client does not read GOOGLE_APPLICATION_CREDENTIALS itself, so the plugin does."""
-    import sys
-
     import google.auth
 
-    initialised: list[tuple[Any, str]] = []
-    fake_ee = SimpleNamespace(Initialize=lambda credentials, project: initialised.append((credentials, project)))
+    initialised: list[tuple[Any, ...]] = []
+    fake_ee = SimpleNamespace(
+        Initialize=lambda credentials, project, opt_url: initialised.append((credentials, project, opt_url))
+    )
     monkeypatch.setitem(sys.modules, "ee", fake_ee)
     monkeypatch.setattr(google.auth, "default", lambda scopes: ("service-account", "from-key"))
     monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "/keys/instance.json")
@@ -128,4 +124,4 @@ def test_a_service_account_key_is_passed_to_earth_engine(monkeypatch: pytest.Mon
 
     dynamic_world._ee()
 
-    assert initialised == [("service-account", "instance-project")]
+    assert initialised == [("service-account", "instance-project", "https://earthengine-highvolume.googleapis.com")]

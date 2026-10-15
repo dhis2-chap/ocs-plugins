@@ -7,9 +7,12 @@ class of each cell across that month's scenes. A cell that no scene saw clearly 
 since class 0 is water.
 
 The output grid is in degrees, ``pixel_degrees`` wide, 0.001 (about 110 m) by default: at 10 m a
-country is hundreds of millions of cells per month. When the grid is coarser than 10 m, Earth
-Engine takes the most frequent 10 m class within each cell rather than sampling one pixel. The
-grid is fetched in tiles with ``computePixels``, each within its request size limit.
+country is hundreds of millions of cells per month. The grid is requested at that size, so Earth
+Engine reads each scene from its lower-resolution levels, which for the class band keep the most
+frequent 10 m class (its pyramiding policy is MODE). That is the scene's most frequent class within
+each cell, without computing the month at 10 m first, which runs out of Earth Engine's memory for a
+country. The grid is read with Xee, which splits it into requests within Earth Engine's size limit
+and fetches them in parallel from the high-volume endpoint.
 
 Earth Engine needs an account and a Google Cloud project registered for it. Credentials are the
 ones the Earth Engine client finds itself (``earthengine authenticate``, or a service account
@@ -22,7 +25,6 @@ import calendar
 import math
 import os
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from typing import Any, cast
 
@@ -33,10 +35,9 @@ from open_climate_service.streaming import BaseDatasetPlugin
 
 _COLLECTION = "GOOGLE/DYNAMICWORLD/V1"
 _FIRST_MONTH = "2015-07"  # the record starts on 27 June 2015, so July is the first full month
-_NATIVE_METRES = 10
 _NO_DATA = 255
-_TILE = 4096  # cells per tile side: 16 MB of uint8, well within computePixels' 48 MB
-_WORKERS = 4
+# The endpoint Earth Engine provides for many parallel automated requests, which Xee makes.
+_HIGH_VOLUME = "https://earthengine-highvolume.googleapis.com"
 _SCOPES = ["https://www.googleapis.com/auth/earthengine", "https://www.googleapis.com/auth/cloud-platform"]
 
 _init_lock = threading.Lock()
@@ -62,7 +63,7 @@ def _ee() -> Any:
                 import google.auth
 
                 credentials, _ = google.auth.default(scopes=_SCOPES)
-            ee.Initialize(credentials, project=project)
+            ee.Initialize(credentials, project=project, opt_url=_HIGH_VOLUME)
             _initialised = True
     return ee
 
@@ -90,19 +91,10 @@ def _grid(bbox: list[float], pixel: float) -> tuple[float, float, int, int]:
     return west, north, width, height
 
 
-def _tiles(width: int, height: int) -> list[tuple[int, int, int, int]]:
-    """``(column, row, width, height)`` of the tiles covering a ``width`` x ``height`` grid."""
-    return [
-        (col, row, min(_TILE, width - col), min(_TILE, height - row))
-        for row in range(0, height, _TILE)
-        for col in range(0, width, _TILE)
-    ]
-
-
 class DynamicWorldPlugin(BaseDatasetPlugin):
     """Most frequent Dynamic World class of each cell in a month (0 water ... 8 snow and ice; 255 no data)."""
 
-    # One month at a time; its tiles are fetched a few at a time, well within Earth Engine's request quota.
+    # One month at a time; Xee already reads each month in parallel requests.
     max_concurrency = 1
 
     def __init__(self, pixel_degrees: float = 0.001) -> None:
@@ -112,7 +104,7 @@ class DynamicWorldPlugin(BaseDatasetPlugin):
         return _months(start, end)
 
     def _composite(self, period_id: str, bbox: list[float]) -> Any:
-        """The month's most frequent class, aggregated to the output grid; None if no scene covers ``bbox``."""
+        """The month's most frequent class of each cell, as a one-image collection; None if no scene covers ``bbox``."""
         ee = _ee()
         year, month = int(period_id[:4]), int(period_id[5:7])
         first = f"{period_id}-01"
@@ -126,48 +118,23 @@ class DynamicWorldPlugin(BaseDatasetPlugin):
         )
         if scenes.size().getInfo() == 0:
             return None
-        # A composite has no projection of its own; give it the native 10 m, so a coarser grid
-        # takes the most frequent class of the 10 m cells within each cell.
-        composite = scenes.mode().setDefaultProjection(ee.Projection("EPSG:4326").atScale(_NATIVE_METRES))
-        cell_metres = self._pixel * 111_320
-        if cell_metres > _NATIVE_METRES * 1.5:
-            per_cell = math.ceil(cell_metres / _NATIVE_METRES) ** 2
-            composite = composite.reduceResolution(ee.Reducer.mode(), maxPixels=min(65535, per_cell + 64))
-        return composite.unmask(_NO_DATA).toUint8()
-
-    def _tile(self, composite: Any, west: float, north: float, tile: tuple[int, int, int, int]) -> np.ndarray:
-        col, row, width, height = tile
-        ee = _ee()
-        pixels = ee.data.computePixels(
-            {
-                "expression": composite,
-                "fileFormat": "NUMPY_NDARRAY",
-                "grid": {
-                    "dimensions": {"width": width, "height": height},
-                    "affineTransform": {
-                        "scaleX": self._pixel,
-                        "shearX": 0,
-                        "translateX": west + col * self._pixel,
-                        "shearY": 0,
-                        "scaleY": -self._pixel,
-                        "translateY": north - row * self._pixel,
-                    },
-                    "crsCode": "EPSG:4326",
-                },
-            }
-        )
-        return np.asarray(pixels[pixels.dtype.names[0]] if pixels.dtype.names else pixels, dtype="uint8")
+        month = scenes.mode().unmask(_NO_DATA).toUint8()
+        return ee.ImageCollection([month.set("system:time_start", ee.Date(first).millis())])
 
     def fetch_period(self, period_id: str, bbox: list[float], **_: Any) -> xr.Dataset:
         west, north, width, height = _grid(bbox, self._pixel)
         classes = np.full((height, width), _NO_DATA, dtype="uint8")
-        composite = self._composite(period_id, bbox)
-        if composite is not None:
-            tiles = _tiles(width, height)
-            with ThreadPoolExecutor(_WORKERS) as pool:
-                parts = pool.map(lambda tile: self._tile(composite, west, north, tile), tiles)
-                for (col, row, w, h), part in zip(tiles, parts, strict=True):
-                    classes[row : row + h, col : col + w] = part
+        month = self._composite(period_id, bbox)
+        if month is not None:
+            read = xr.open_dataset(
+                month,
+                engine="ee",
+                crs="EPSG:4326",
+                crs_transform=(self._pixel, 0, west, 0, -self._pixel, north),
+                shape_2d=(width, height),
+            )
+            # Xee reads the grid as floats; the classes and the no data code are whole bytes.
+            classes = read["label"].isel(time=0).transpose("y", "x").values.astype("uint8")
 
         x = west + (np.arange(width) + 0.5) * self._pixel
         y = north - (np.arange(height) + 0.5) * self._pixel

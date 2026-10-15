@@ -2320,6 +2320,7 @@ dependencies = [
     { name = "earthengine-api" },
     { name = "open-climate-service" },
     { name = "pyhdf" },
+    { name = "xee" },
 ]
 
 [package.dev-dependencies]
@@ -2335,6 +2336,7 @@ requires-dist = [
     { name = "earthengine-api", specifier = ">=1.0" },
     { name = "open-climate-service", git = "https://github.com/dhis2/open-climate-service?branch=main" },
     { name = "pyhdf", specifier = ">=0.11" },
+    { name = "xee", specifier = ">=0.1.2,<0.2" },
 ]
 
 [package.metadata.requires-dev]
@@ -4596,6 +4598,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/00/36/156c7f3784e70b10a16f4a1345c8f153962c37cd6d335bf23f1b730e855f/xclim-0.62.0.tar.gz", hash = "sha256:78404c1136a4d59a6a69425be11ac4eb969d368101ac14bdebc52f6c458a3430", size = 886476, upload-time = "2026-08-17T20:56:07.829Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/36/85/96e5501dc9c16787b38b3762cb596302a3db84854bc104ad991077d35d54/xclim-0.62.0-py3-none-any.whl", hash = "sha256:8c0277f7060aebd3f2f8b92e59c2b8016b2c8d4a3cdac2e6f7ae0141210f899f", size = 386850, upload-time = "2026-08-17T20:56:06.104Z" },
+]
+
+[[package]]
+name = "xee"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "affine" },
+    { name = "earthengine-api" },
+    { name = "pyproj" },
+    { name = "shapely" },
+    { name = "xarray" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/30/c6/f817e2616156b78838ff7e10fd9d80f967ceceeed667e66fcfd8f83d610c/xee-0.1.2.tar.gz", hash = "sha256:a24571e5c066e8e103bac5f40d2cf64f217161a3a1e09182baad89325df7bccb", size = 561368, upload-time = "2026-07-14T20:24:33.907Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/af/6a/0949d7f43d0b816b07d65d2745825a87ed99f29bae670187ffbd4ba25fda/xee-0.1.2-py3-none-any.whl", hash = "sha256:0194b0cdd0846f7710cbd2abbbd1aad7bec1b50da1b6f79ad87819587f77d1b3", size = 37153, upload-time = "2026-07-14T20:24:32.603Z" },
 ]
 
 [[package]]
