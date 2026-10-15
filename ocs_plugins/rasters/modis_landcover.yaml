@@ -1,0 +1,38 @@
+- id: modis_landcover_yearly
+  name: Land cover class (MODIS MCD12Q1, yearly)
+  short_name: Land cover
+  description: >-
+    Land cover class of each 500 m cell, worldwide, yearly from 2001, in the 17 IGBP classes of
+    MODIS MCD12Q1: 1 evergreen needleleaf forest, 2 evergreen broadleaf forest, 3 deciduous
+    needleleaf forest, 4 deciduous broadleaf forest, 5 mixed forest, 6 closed shrubland, 7 open
+    shrubland, 8 woody savanna, 9 savanna, 10 grassland, 11 permanent wetland, 12 cropland,
+    13 urban and built-up, 14 cropland and natural vegetation mosaic, 15 snow and ice, 16 barren,
+    17 water. MODIS science collection ends in 2027, so the record stops then. Needs an
+    Earthdata Login.
+  variable: land_cover
+  period_type: yearly
+  sync:
+    kind: temporal
+    execution: append
+  extents:
+    spatial:
+      bbox: [-180, -90, 180, 90]
+    temporal:
+      begin: "2001"
+      resolution: P1Y
+  ingestion:
+    plugin: ocs_plugins.rasters.modis_landcover.MODISLandCoverPlugin
+    resampling: mode
+  units: "1"
+  resolution: 500 m x 500 m
+  source: MODIS Terra and Aqua MCD12Q1 v061, IGBP classification (NASA LP DAAC)
+  source_url: https://www.earthdata.nasa.gov/data/catalog/lpcloud-mcd12q1-061
+  license:
+    name: NASA Earth Science Data
+    url: https://www.earthdata.nasa.gov/engage/open-data-services-software-policies/data-use-guidance
+  providers:
+    - name: NASA LP DAAC
+      url: https://www.earthdata.nasa.gov/centers/lp-daac
+  display:
+    colormap: viridis
+    range: [1, 17]

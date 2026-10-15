@@ -1,0 +1,80 @@
+- id: clms_gpp_dekadal
+  name: Gross primary production (Copernicus CLMS 300 m, dekadal)
+  short_name: GPP
+  description: >-
+    Carbon taken up by vegetation through photosynthesis, at 300 m, worldwide, from November 2013,
+    one value per dekad (days 1-10, 11-20 and 21 to the end of the month). From PROBA-V and then
+    Sentinel-3 OLCI. Only final values are published, about two months after the dekad; the
+    preliminary near-real-time versions are skipped. Sea and missing observations are left
+    empty. Needs free Copernicus Data Space Ecosystem S3 keys.
+  standard_name: gross_primary_productivity_of_biomass_expressed_as_carbon
+  variable: gpp
+  period_type: dekadal
+  sync:
+    kind: temporal
+    execution: append
+  extents:
+    spatial:
+      bbox: [-180, -60, 180, 80]
+    temporal:
+      begin: "2013-11-01"
+  ingestion:
+    plugin: ocs_plugins.rasters.clms_productivity.CLMSProductivityDekadalPlugin
+    params:
+      product: gpp
+  units: g m-2 day-1
+  resolution: 300 m x 300 m
+  source: Copernicus Land Monitoring Service GPP 300 m V2 (Copernicus Data Space Ecosystem)
+  source_url: https://land.copernicus.eu/en/products/vegetation/gross-primary-production-v2-0-300m
+  license:
+    name: Copernicus Land Monitoring Service data policy
+    url: https://land.copernicus.eu/en/data-policy
+  providers:
+    - name: Copernicus Land Monitoring Service
+      url: https://land.copernicus.eu/
+    - name: Copernicus Data Space Ecosystem
+      url: https://dataspace.copernicus.eu/
+  display:
+    colormap: YlGn
+    range: [0, 15]
+
+- id: clms_npp_dekadal
+  name: Net primary production (Copernicus CLMS 300 m, dekadal)
+  short_name: NPP
+  description: >-
+    Carbon stored by vegetation after its own respiration, at 300 m, worldwide, from November
+    2013, one value per dekad. CLMS derives it from gross primary production with a constant
+    carbon use efficiency of 0.5, so it is half of GPP in every pixel and never negative. Only
+    final values are published, about two months after the dekad. Sea and missing observations
+    are left empty. Needs free Copernicus Data Space Ecosystem S3 keys.
+  standard_name: net_primary_productivity_of_biomass_expressed_as_carbon
+  variable: npp
+  period_type: dekadal
+  sync:
+    kind: temporal
+    execution: append
+  extents:
+    spatial:
+      bbox: [-180, -60, 180, 80]
+    temporal:
+      begin: "2013-11-01"
+  ingestion:
+    plugin: ocs_plugins.rasters.clms_productivity.CLMSProductivityDekadalPlugin
+    params:
+      product: npp
+  units: g m-2 day-1
+  resolution: 300 m x 300 m
+  source: Copernicus Land Monitoring Service NPP 300 m V2 (Copernicus Data Space Ecosystem)
+  source_url: https://land.copernicus.eu/en/products/vegetation/net-primary-production-v2-0-300m
+  license:
+    name: Copernicus Land Monitoring Service data policy
+    url: https://land.copernicus.eu/en/data-policy
+  providers:
+    - name: Copernicus Land Monitoring Service
+      url: https://land.copernicus.eu/
+    - name: Copernicus Data Space Ecosystem
+      url: https://dataspace.copernicus.eu/
+  display:
+    # GPP's ramp and range, so equal colour means equal carbon flux.
+    colormap: YlGn
+    range: [0, 15]
