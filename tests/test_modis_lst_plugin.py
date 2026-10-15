@@ -47,8 +47,8 @@ def archive(monkeypatch: pytest.MonkeyPatch) -> dict[str, tuple[np.ndarray, np.n
         _write(target, *files[url.rsplit("/", 1)[-1].removesuffix(".hdf")])
         return target
 
-    for module in (_modis, modis_lst):
-        monkeypatch.setattr(module, "cmr_granules", cmr)
+    monkeypatch.setattr(_modis, "cmr_granules", cmr)
+    monkeypatch.setattr(_modis, "latest_granule_start", lambda short_name, version, bbox: DAY if files else None)
     monkeypatch.setattr(_modis, "download", fetch)
     monkeypatch.setattr(_modis, "earthdata_session", lambda: None)
     return files
@@ -98,3 +98,35 @@ def test_days_stop_at_the_latest_published_granule(archive: dict) -> None:
 def test_a_day_without_granules_fails_clearly(archive: dict) -> None:
     with pytest.raises(RuntimeError, match="No MOD11A1"):
         modis_lst.MODISLSTDayPlugin().fetch_period(DAY, BBOX)
+
+
+def test_historical_days_stay_available_when_the_newest_granule_is_old(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Months without a new granule (a publication gap, or MODIS having ended) must not hide the archive.
+    monkeypatch.setattr(_modis, "latest_granule_start", lambda short_name, version, bbox: "2025-01-10")
+
+    days = asyncio.run(modis_lst.MODISLSTDayPlugin().periods("2025-01-08", "2026-10-15"))
+
+    assert days == ["2025-01-08", "2025-01-09", "2025-01-10"]
+
+
+def test_the_newest_granule_is_one_query_over_the_whole_archive(monkeypatch: pytest.MonkeyPatch) -> None:
+    import requests
+
+    sent: dict[str, Any] = {}
+
+    class Response:
+        def raise_for_status(self) -> None:
+            pass
+
+        def json(self) -> dict:
+            return {"feed": {"entry": [{"time_start": "2025-01-10T00:00:00.000Z"}]}}
+
+    def get(url: str, params: dict[str, Any], timeout: float) -> Response:
+        sent.update(params)
+        return Response()
+
+    monkeypatch.setattr(requests, "get", get)
+
+    assert _modis.latest_granule_start("MOD11A1", "061", [29.5, -2.0, 29.6, -1.9]) == "2025-01-10"
+    assert sent["sort_key"] == "-start_date" and sent["page_size"] == 1 and sent["version"] == "061"
+    assert "temporal" not in sent

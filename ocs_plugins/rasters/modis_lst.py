@@ -12,7 +12,7 @@ converted to degrees Celsius. See ``_modis`` for how tiles are found, read and m
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import date
 from pathlib import Path
 from typing import Any, cast
 
@@ -21,7 +21,6 @@ import xarray as xr
 from open_climate_service.streaming import BaseDatasetPlugin, daily_period_ids
 
 from ocs_plugins.rasters import _modis
-from ocs_plugins.rasters.earthdata import cmr_granules
 
 _SHORT_NAME = "MOD11A1"
 _VERSION = "061"
@@ -35,14 +34,8 @@ _PROBE_BBOX = [29.5, -2.0, 29.6, -1.9]
 
 def _latest_day() -> date | None:
     """The latest day with a published MOD11A1 v061 granule, from CMR."""
-    today = datetime.now(UTC).date()
-    granules = cmr_granules(
-        _SHORT_NAME,
-        (f"{today - timedelta(days=30)}T00:00:00Z", f"{today}T23:59:59Z"),
-        bbox=_PROBE_BBOX,
-        version=_VERSION,
-    )
-    return max((date.fromisoformat(granule["time_start"][:10]) for granule in granules), default=None)
+    latest = _modis.latest_granule_start(_SHORT_NAME, _VERSION, _PROBE_BBOX)
+    return date.fromisoformat(latest) if latest else None
 
 
 def good_quality(qc: np.ndarray) -> np.ndarray:

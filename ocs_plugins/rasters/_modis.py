@@ -19,7 +19,7 @@ from typing import Any
 import numpy as np
 import xarray as xr
 
-from ocs_plugins.rasters.earthdata import cmr_granules, data_links, download, earthdata_session
+from ocs_plugins.rasters.earthdata import _CMR_GRANULES, cmr_granules, data_links, download, earthdata_session
 
 SINUSOIDAL = "+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R=6371007.181 +units=m +no_defs"
 TILE_SIZE = 1111950.5196666666
@@ -51,6 +51,27 @@ def granules_for_day(short_name: str, version: str, day: str, bbox: list[float])
     """The granules of ``short_name`` starting on ``day`` (``YYYY-MM-DD``) over ``bbox``."""
     found = cmr_granules(short_name, (f"{day}T00:00:00Z", f"{day}T23:59:59Z"), bbox=bbox, version=version)
     return [granule for granule in found if granule["time_start"][:10] == day]
+
+
+def latest_granule_start(short_name: str, version: str, bbox: list[float]) -> str | None:
+    """Start date (``YYYY-MM-DD``) of the newest granule over ``bbox``, from CMR, or None.
+
+    One request, newest first, over the whole archive: a publication gap or the end of a
+    collection must not hide the dates that are published.
+    """
+    import requests
+
+    query = {
+        "short_name": short_name,
+        "version": version,
+        "bounding_box": ",".join(str(float(v)) for v in bbox),
+        "sort_key": "-start_date",
+        "page_size": 1,
+    }
+    response = requests.get(_CMR_GRANULES, params=query, timeout=60)
+    response.raise_for_status()
+    entries = response.json()["feed"]["entry"]
+    return entries[0]["time_start"][:10] if entries else None
 
 
 def target_grid(bbox: list[float], resolution: float) -> tuple[Any, int, int]:

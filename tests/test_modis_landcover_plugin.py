@@ -48,7 +48,11 @@ def archive(monkeypatch: pytest.MonkeyPatch) -> dict[str, np.ndarray]:
         return target
 
     monkeypatch.setattr(_modis, "cmr_granules", cmr)
-    monkeypatch.setattr(modis_landcover, "cmr_granules", cmr)
+    monkeypatch.setattr(
+        _modis,
+        "latest_granule_start",
+        lambda short_name, version, bbox: max((f"{t[9:13]}-01-01" for t in files), default=None),
+    )
     monkeypatch.setattr(_modis, "download", fetch)
     monkeypatch.setattr(_modis, "earthdata_session", lambda: None)
     return files

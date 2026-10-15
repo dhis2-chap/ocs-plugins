@@ -17,7 +17,6 @@ import xarray as xr
 from open_climate_service.streaming import BaseDatasetPlugin
 
 from ocs_plugins.rasters import _modis
-from ocs_plugins.rasters.earthdata import cmr_granules
 
 _SHORT_NAME = "MCD12Q1"
 _VERSION = "061"
@@ -30,16 +29,8 @@ _FIRST_YEAR = 2001
 
 def _latest_year() -> int | None:
     """The latest year with a published MCD12Q1 v061 map, from CMR."""
-    from datetime import UTC, datetime
-
-    this_year = datetime.now(UTC).year
-    granules = cmr_granules(
-        _SHORT_NAME,
-        (f"{this_year - 5}-01-01T00:00:00Z", f"{this_year}-12-31T23:59:59Z"),
-        bbox=_PROBE_BBOX,
-        version=_VERSION,
-    )
-    return max((int(granule["time_start"][:4]) for granule in granules), default=None)
+    latest = _modis.latest_granule_start(_SHORT_NAME, _VERSION, _PROBE_BBOX)
+    return int(latest[:4]) if latest else None
 
 
 def _read_classes(path: Path) -> np.ndarray:
