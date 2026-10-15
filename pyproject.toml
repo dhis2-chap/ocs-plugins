@@ -7,7 +7,7 @@ license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
 # Not pinned: the instance installing these plugins decides which OCS revision it runs.
-dependencies = ["open-climate-service"]
+dependencies = ["open-climate-service", "boto3>=1.34", "pyhdf>=0.11"]
 
 [project.urls]
 Repository = "https://github.com/dhis2-chap/ocs-plugins"
