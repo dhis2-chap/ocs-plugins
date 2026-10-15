@@ -4,7 +4,10 @@
 pixel edges on whole degrees, 0 as no data), at a coarser pixel size so the tiles stay small.
 """
 
+import io
+import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -93,3 +96,29 @@ def test_an_extent_with_no_tiles_fails_clearly(monkeypatch: pytest.MonkeyPatch) 
     _use_tiles(monkeypatch, [])
     with pytest.raises(RuntimeError, match="No ESA WorldCover tiles"):
         worldcover.WorldCoverPlugin().fetch_period("2021", [-30.0, 0.0, -29.0, 1.0])
+
+
+def test_the_native_grid_has_no_extra_border_pixel() -> None:
+    # -2.499 / (1 / 12000) is -29988.000000000004 in floating point; it is still a whole pixel edge.
+    x, y = worldcover._grid_axes([28.001, -2.499, 28.5, -2.0])
+
+    assert len(x) == 5988 and len(y) == 5988
+    assert x[0] - 0.5 / 12000 <= 28.001 < x[0] + 0.5 / 12000  # the pixel containing the west edge
+    assert np.isclose(y[-1], -2.499 + 0.5 / 12000)  # the south edge is a pixel edge
+
+
+def test_the_tile_grid_is_read_from_the_bucket(monkeypatch: pytest.MonkeyPatch) -> None:
+    requested: list[str] = []
+    grid = {"features": [{"properties": {"ll_tile": "S03E027"}}, {"properties": {"ll_tile": "N51W003"}}]}
+
+    def urlopen(url: str, timeout: float = 0) -> Any:
+        requested.append(url)
+        return io.BytesIO(json.dumps(grid).encode())
+
+    worldcover._available_tiles.cache_clear()
+    monkeypatch.setattr(worldcover.urllib.request, "urlopen", urlopen)
+    try:
+        assert worldcover._available_tiles() == frozenset({"S03E027", "N51W003"})
+    finally:
+        worldcover._available_tiles.cache_clear()
+    assert requested == [f"{worldcover._BUCKET}/v200/2021/esa_worldcover_grid.geojson"]

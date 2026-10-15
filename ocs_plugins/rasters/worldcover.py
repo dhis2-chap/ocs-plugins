@@ -57,10 +57,20 @@ def _tiles_for(bbox: list[float]) -> list[str]:
     return [name for name in (_tile_name(lat, lon) for lat in lats for lon in lons) if name in available]
 
 
+def _pixel_edge(coordinate: float) -> float:
+    """``coordinate`` in pixels of the product grid, with floating-point noise around a whole pixel removed.
+
+    ``-2.499 / (1 / 12000)`` is ``-29988.000000000004``, which ``ceil`` would turn into an extra pixel.
+    """
+    index = coordinate / _RES
+    nearest = round(index)
+    return float(nearest) if abs(index - nearest) < 1e-6 else index
+
+
 def _grid_axes(bbox: list[float]) -> tuple[np.ndarray, np.ndarray]:
     """Pixel centres of the output: ``bbox`` widened to whole pixels of the product grid."""
-    first_col, last_col = math.floor(bbox[0] / _RES), math.ceil(bbox[2] / _RES)
-    first_row, last_row = math.floor(bbox[1] / _RES), math.ceil(bbox[3] / _RES)
+    first_col, last_col = math.floor(_pixel_edge(bbox[0])), math.ceil(_pixel_edge(bbox[2]))
+    first_row, last_row = math.floor(_pixel_edge(bbox[1])), math.ceil(_pixel_edge(bbox[3]))
     x = (np.arange(first_col, last_col) + 0.5) * _RES
     y = (np.arange(last_row - 1, first_row - 1, -1) + 0.5) * _RES  # north first
     return x, y
