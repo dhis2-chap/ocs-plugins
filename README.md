@@ -66,6 +66,7 @@ which take precedence over the built-ins.
 | `modis_lst_day_daily` | daily | MODIS Terra MOD11A1 v061 daytime land surface temperature, good-quality cells, from 2000 (NASA LP DAAC) | Earthdata Login |
 | `modis_ndvi_monthly`, `modis_evi_monthly` | monthly | MODIS MOD13Q1/MYD13Q1 v6.1 (Microsoft Planetary Computer) | none |
 | `chelsa_temperature_monthly` | monthly | CHELSA v2.1 temperature at 1 km, 1980–2021, no longer extended (WSL) | none |
+| `dynamic_world_landcover_monthly` | monthly | Dynamic World 10 m land cover, most frequent class per month, from July 2015, about 110 m by default (Google Earth Engine) | Earth Engine account and project |
 | `clms_ndvi_dekadal` | dekadal | Copernicus Land Monitoring Service NDVI 300 m V3, from 2014 (Copernicus Data Space Ecosystem) | CDSE S3 keys |
 | `clms_gpp_dekadal`, `clms_npp_dekadal` | dekadal | Copernicus Land Monitoring Service GPP and NPP 300 m V2, from November 2013, final values only (Copernicus Data Space Ecosystem) | CDSE S3 keys |
 | `esa_worldcover_2021` | yearly | ESA WorldCover 10 m land cover, 2021 (AWS Open Data) | none |
@@ -110,6 +111,10 @@ is first ingested and needs a daily sync to grow; and **MODIS science collection
 
   For IMERG, also approve the *NASA GESDISC DATA ARCHIVE* application in your Earthdata profile.
   An `EARTHDATA_TOKEN` environment variable is used instead of `~/.netrc` when set.
+- **Google Earth Engine:** each instance signs up for its own Earth Engine account and registers its
+  own Google Cloud project at [code.earthengine.google.com/register](https://code.earthengine.google.com/register),
+  as with the CDS. Set `EARTHENGINE_PROJECT` to that project's id. The client uses the credentials from
+  `earthengine authenticate`, or a service account's key file in `GOOGLE_APPLICATION_CREDENTIALS`.
 - **Microsoft Planetary Computer** and **AWS Open Data:** no account needed.
 
 ## Develop
