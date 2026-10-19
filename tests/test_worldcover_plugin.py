@@ -78,6 +78,21 @@ def test_tiles_meet_without_a_gap_and_ocean_is_no_data(bucket: Path, monkeypatch
     assert set(np.unique(values)) == {0, 10, 40}
 
 
+def test_a_mosaic_of_several_tiles_writes_to_zarr(
+    bucket: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Tiles that do not line up with the chunks still give the uniform chunks Zarr requires."""
+    monkeypatch.setattr(worldcover, "_CHUNK", 100)
+    tiles = [
+        _write_tile(bucket, lat, lon, 10 * (i + 1))
+        for i, (lat, lon) in enumerate([(-3, 27), (-3, 30), (-6, 27), (-6, 30)])
+    ]
+    _use_tiles(monkeypatch, tiles)
+
+    ds = worldcover.WorldCoverPlugin().fetch_period("2021", [28.9, -4.1, 30.7, -1.2])
+    ds.to_zarr(tmp_path / "store.zarr", mode="w", zarr_format=3)
+
+
 def test_the_output_is_on_whole_pixels_of_the_product_grid(bucket: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _use_tiles(monkeypatch, [_write_tile(bucket, -3, 27, 30)])
 

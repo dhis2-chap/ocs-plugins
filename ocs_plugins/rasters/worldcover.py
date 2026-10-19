@@ -110,6 +110,8 @@ class WorldCoverPlugin(BaseDatasetPlugin):
         # Tiles do not overlap, and a cell outside a tile is 0, so the largest value is the tile's own.
         classes = parts[0] if len(parts) == 1 else xr.concat(parts, dim="tile").max("tile")
         classes = classes.astype("uint8").drop_vars([c for c in classes.coords if c not in ("x", "y")])
+        # Each tile's chunks start at its own edge, so the mosaic's do not line up; Zarr needs them uniform.
+        classes = classes.chunk({"y": _CHUNK, "x": _CHUNK})
         classes.attrs = {"units": "1", "flag_meanings": "ESA WorldCover class codes, see the template description"}
         classes.encoding = {"_FillValue": np.uint8(_NO_DATA)}
         ds = classes.to_dataset(name="landcover").rio.write_crs("EPSG:4326")
