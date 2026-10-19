@@ -6,8 +6,8 @@ do not exist; the bucket's tile grid says which do. No account is needed.
 
 At 10 m a country is large: Rwanda is about 575 million cells. The tiles are therefore opened
 lazily with dask and only the windows inside the extent are read, chunk by chunk, as the store is
-written, so memory stays at a few chunks. The classes are kept as ``uint8`` with 0 as the fill
-value, as published, rather than widened to floats.
+written, so memory stays at a few chunks. The product's no data code, 0, is stored as missing
+(NaN), so a cell that is no class counts towards none in the statistics.
 """
 
 from __future__ import annotations
@@ -77,7 +77,7 @@ def _grid_axes(bbox: list[float]) -> tuple[np.ndarray, np.ndarray]:
 
 
 class WorldCoverPlugin(BaseDatasetPlugin):
-    """ESA WorldCover 2021 land cover classes (10 tree cover ... 100 moss and lichen; 0 is no data)."""
+    """ESA WorldCover 2021 land cover classes (10 tree cover ... 100 moss and lichen; NaN no data)."""
 
     async def periods(self, start: str, end: str) -> list[str]:
         return [_YEAR] if int(start[:4]) <= int(_YEAR) <= int(end[:4]) else []
@@ -109,10 +109,10 @@ class WorldCoverPlugin(BaseDatasetPlugin):
             raise RuntimeError(f"No ESA WorldCover data within {bbox}")
         # Tiles do not overlap, and a cell outside a tile is 0, so the largest value is the tile's own.
         classes = parts[0] if len(parts) == 1 else xr.concat(parts, dim="tile").max("tile")
-        classes = classes.astype("uint8").drop_vars([c for c in classes.coords if c not in ("x", "y")])
+        classes = classes.where(classes != _NO_DATA).astype("float32")
+        classes = classes.drop_vars([c for c in classes.coords if c not in ("x", "y")])
         # Each tile's chunks start at its own edge, so the mosaic's do not line up; Zarr needs them uniform.
         classes = classes.chunk({"y": _CHUNK, "x": _CHUNK})
         classes.attrs = {"units": "1", "flag_meanings": "ESA WorldCover class codes, see the template description"}
-        classes.encoding = {"_FillValue": np.uint8(_NO_DATA)}
         ds = classes.to_dataset(name="landcover").rio.write_crs("EPSG:4326")
         return cast(xr.Dataset, ds.expand_dims({"t": [np.datetime64(f"{period_id}-01-01", "ns")]}))

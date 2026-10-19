@@ -1,0 +1,52 @@
+- id: dynamic_world_landcover_monthly
+  name: Land cover (Dynamic World, monthly)
+  short_name: Land cover
+  description: >-
+    Land cover of each cell in a month, from Dynamic World's near-real-time 10 m classification of
+    Sentinel-2 scenes, from July 2015 to last month: the most frequent class across the month's
+    scenes. A cell no scene saw clearly that month, under persistent cloud, is no data. The grid is
+    about 110 m by default, each cell taking the most frequent 10 m class within it; set
+    pixel_degrees to 0.0001 for 10 m, which makes a country's store very large. Needs the
+    instance's own Google Earth Engine account and registered project, named in EARTHENGINE_PROJECT.
+    This dataset is produced for the Dynamic World Project by Google in partnership with National
+    Geographic Society and the World Resources Institute. Contains modified Copernicus Sentinel data
+    [2015-present].
+  variable: landcover
+  period_type: monthly
+  sync:
+    kind: temporal
+    execution: append
+  extents:
+    spatial:
+      bbox: [-180, -90, 180, 90]
+    temporal:
+      begin: "2015-07"
+      resolution: P1M
+  ingestion:
+    plugin: ocs_plugins.rasters.dynamic_world.DynamicWorldPlugin
+    resampling: mode
+    params:
+      pixel_degrees: 0.001
+  classes:
+    - { value: 0, label: "Water", color: "#419bdf" }
+    - { value: 1, label: "Trees", color: "#397d49" }
+    - { value: 2, label: "Grass", color: "#88b053" }
+    - { value: 3, label: "Flooded vegetation", color: "#7a87c6" }
+    - { value: 4, label: "Crops", color: "#e49635" }
+    - { value: 5, label: "Shrub and scrub", color: "#dfc35a" }
+    - { value: 6, label: "Built", color: "#c4281b" }
+    - { value: 7, label: "Bare", color: "#a59b8f" }
+    - { value: 8, label: "Snow and ice", color: "#b39fe1" }
+  units: "1"
+  resolution: about 110 m (0.001 degrees), from 10 m
+  source: Dynamic World V1 (Google and World Resources Institute, via Google Earth Engine)
+  source_url: https://dynamicworld.app/
+  license: CC-BY-4.0
+  providers:
+    - name: Google and World Resources Institute (Dynamic World)
+      url: https://dynamicworld.app/
+    - name: Google Earth Engine
+      url: https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_DYNAMICWORLD_V1
+  display:
+    colormap: viridis
+    range: [0, 8]

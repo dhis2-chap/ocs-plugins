@@ -68,14 +68,14 @@ def test_tiles_meet_without_a_gap_and_ocean_is_no_data(bucket: Path, monkeypatch
     classes = ds["landcover"].isel(t=0)
 
     assert ds.rio.crs.to_epsg() == 4326
-    assert classes.dtype == np.uint8 and classes.encoding["_FillValue"] == 0
+    assert "_FillValue" not in classes.encoding
     assert hasattr(classes.data, "dask")  # read lazily, chunk by chunk, as the store is written
     values = classes.values
     land = classes.sel(y=slice(-0.0001, -1.0))
     assert (land.sel(x=slice(29.5, 29.9999)) == 40).all()  # west of the seam
     assert (land.sel(x=slice(30.0, 30.5)) == 10).all()  # east of the seam
-    assert (classes.sel(y=slice(0.5, 0.0001)) == 0).all()  # ocean
-    assert set(np.unique(values)) == {0, 10, 40}
+    assert classes.sel(y=slice(0.5, 0.0001)).isnull().all()  # ocean is missing, not a code
+    assert set(np.unique(values[np.isfinite(values)])) == {10, 40}
 
 
 def test_a_mosaic_of_several_tiles_writes_to_zarr(
