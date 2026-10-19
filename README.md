@@ -71,12 +71,19 @@ which take precedence over the built-ins.
 | `esa_worldcover_2021` | yearly | ESA WorldCover 10 m land cover, 2021 (AWS Open Data) | none |
 | `modis_landcover_yearly` | yearly | MODIS MCD12Q1 v061 land cover, IGBP classes, from 2001 (NASA LP DAAC) | Earthdata Login |
 | `esacci_landcover_fraction_yearly`, `esacci_landcover_class_yearly` | yearly | ESA CCI / C3S land cover, 1992–2022 (Copernicus CDS) | CDS key, dataset licence accepted |
+| `rwi` | yearly | Meta Relative Wealth Index, 2021, for the instance's `extent.country_code`, low- and middle-income countries only (HDX) | none |
 | `copdem90_elevation_static` | static | Copernicus DEM GLO-90 (AWS Open Data); the 30 m DEM is in OCS core | none |
 
 Each template's `description` says more about the dataset, including its known limits. Two to
 note: **the MODIS flood product keeps only about the last 7 days**, so its record starts when it
 is first ingested and needs a daily sync to grow; and **MODIS science collection ends in 2027**
 (Terra early, Aqua late), so the MODIS datasets stop updating then.
+
+**Relative Wealth Index values rank areas within one country only**, so they cannot be compared
+between instances. HDX lists its licence as "Other", with no confirmed open terms: check them
+before publishing the layer anywhere public, and cite Chi, Fang, Chatterjee & Blumenstock,
+"Microestimates of wealth for all low- and middle-income countries", PNAS 2022
+([doi:10.1073/pnas.2113658119](https://doi.org/10.1073/pnas.2113658119)).
 
 ## Credentials
 

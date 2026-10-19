@@ -1,0 +1,60 @@
+# Meta Relative Wealth Index, one country per instance, on its native zoom-14 Web Mercator grid
+# (EPSG:3857, about 2.4 km cells). See the plugin docstring for how the grid is rebuilt from the
+# HDX point file.
+#
+# VALUES ARE RELATIVE WITHIN ONE COUNTRY. RWI ranks areas against others in the same country,
+# so two instances cannot compare values and a multi-country mosaic is meaningless. The
+# description below carries this to the published collection.
+#
+# The country is the instance's `extent.country_code` (ISO3). Coverage is low- and
+# middle-income countries only. 16 of the 109 HDX files are named by country slug rather than
+# ISO3, and India and Pakistan share one; for those, set `resource_filename` in the ingestion
+# params.
+#
+# Ingest the single epoch, the April 2021 release:
+#
+#   POST /ingestions   (header: Prefer: respond-async)
+#   {"dataset_id": "rwi", "start": "2021", "end": "2021", "publish": true}
+
+- id: rwi
+  name: Relative Wealth Index (Meta, 2021)
+  short_name: Relative wealth
+  description: >-
+    Relative wealth for 2.4 km cells. Values rank areas WITHIN one country only, so they cannot
+    be compared between countries. Empty cells are unknown, not zero.
+  variable: rwi
+  period_type: yearly
+  sync:
+    kind: release
+  extents:
+    spatial:
+      # Where the source has data: a global box, since the real limit is a country list, which
+      # the plugin enforces.
+      bbox: [-180, -90, 180, 90]
+    temporal:
+      begin: "2021"
+      end: "2021"
+      resolution: P1Y
+  ingestion:
+    plugin: ocs_plugins.rasters.rwi.RelativeWealthIndexPlugin
+  units: "1"
+  resolution: 2.4km x 2.4km (zoom-14 Web Mercator)
+  source: Meta Relative Wealth Index via HDX (licence "Other", not confirmed CC BY)
+  source_url: https://data.humdata.org/dataset/relative-wealth-index
+  license:
+    # HDX lists the licence as "Other" with no licence URL, so the terms are not established.
+    # Left unrecognised, it publishes as unknown, so a derived product cannot claim to be openly
+    # reusable. Attribution is required: Chi, Fang, Chatterjee & Blumenstock, PNAS 2022.
+    name: HDX "Other" — terms not confirmed
+    url: https://data.humdata.org/dataset/relative-wealth-index
+  providers:
+    - name: Meta
+      url: https://ai.meta.com/ai-for-good/datasets/relative-wealth-index/
+    - name: Humanitarian Data Exchange
+      url: https://data.humdata.org/dataset/relative-wealth-index
+  display:
+    # Sequential, not diverging: 0 is only the country mean, not a boundary. The range clips
+    # about 0.4 % of Nepal's populated cells (p1 -0.9, p99 1.0); other countries are
+    # standardised similarly but not identically.
+    colormap: Viridis
+    range: [-1.0, 1.5]
