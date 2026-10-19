@@ -2,10 +2,8 @@
   name: Land cover (ESA WorldCover 10 m, 2021)
   short_name: Land cover
   description: >-
-    Land cover class of each 10 m cell, worldwide, for 2021, in the 11 ESA WorldCover classes:
-    10 tree cover, 20 shrubland, 30 grassland, 40 cropland, 50 built-up, 60 bare or sparse
-    vegetation, 70 snow and ice, 80 permanent water, 90 herbaceous wetland, 95 mangroves,
-    100 moss and lichen. 0 is no data. Needs no account. At 10 m a country is hundreds of millions
+    Land cover class of each 10 m cell, worldwide, for 2021, in the 11 ESA WorldCover classes.
+    Needs no account. At 10 m a country is hundreds of millions
     of cells, so ingesting it takes a while and the store is large.
   variable: landcover
   period_type: yearly
@@ -25,6 +23,18 @@
   ingestion:
     plugin: ocs_plugins.rasters.worldcover.WorldCoverPlugin
     resampling: mode
+  classes:
+    - { value: 10, label: "Tree cover", color: "#006400" }
+    - { value: 20, label: "Shrubland", color: "#ffbb22" }
+    - { value: 30, label: "Grassland", color: "#ffff4c" }
+    - { value: 40, label: "Cropland", color: "#f096ff" }
+    - { value: 50, label: "Built-up", color: "#fa0000" }
+    - { value: 60, label: "Bare or sparse vegetation", color: "#b4b4b4" }
+    - { value: 70, label: "Snow and ice", color: "#f0f0f0" }
+    - { value: 80, label: "Permanent water", color: "#0064c8" }
+    - { value: 90, label: "Herbaceous wetland", color: "#0096a0" }
+    - { value: 95, label: "Mangroves", color: "#00cf75" }
+    - { value: 100, label: "Moss and lichen", color: "#fae6a0" }
   units: "1"
   resolution: 10 m x 10 m
   source: ESA WorldCover 2021 v200 (AWS Open Data)
@@ -36,5 +46,6 @@
     - name: AWS Open Data
       url: https://registry.opendata.aws/esa-worldcover-vito/
   display:
+    nodata: 0
     colormap: viridis
     range: [10, 100]
