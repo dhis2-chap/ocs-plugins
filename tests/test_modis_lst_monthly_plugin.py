@@ -62,6 +62,43 @@ def test_the_monthly_mean_weights_composites_and_drops_fill_and_poor_quality() -
     np.testing.assert_allclose(mean, [(2 * 10 + 8 * 20) / 10, 30.0], atol=0.02)
 
 
+@pytest.mark.parametrize("band", ["day", "night"])
+def test_fetch_weights_each_composite_by_its_days_in_the_month(monkeypatch: pytest.MonkeyPatch, band: str) -> None:
+    """Through `fetch_period`, with odc-stac's load replaced by what it returns for real: one time
+    step per composite, stamped with its start day, on latitude/longitude axes."""
+    import odc.stac
+
+    composites = {  # start, end, temperature in °C
+        "2024-06-25": ("2024-07-02", 10.0),  # 2 days in July
+        "2024-07-03": ("2024-07-10", 20.0),  # 8 days
+        "2024-07-27": ("2024-08-03", 30.0),  # 5 days
+    }
+    items = [_item("MOD11A2", start, end) for start, (end, _) in composites.items()]
+    monkeypatch.setattr(lst.MODISLandSurfaceTemperatureMonthlyPlugin, "_search", lambda *_: items)
+
+    def load(found: list[Any], bands: list[str], **_: Any) -> xr.Dataset:
+        lst_band, qc_band = bands
+        assert lst_band == f"LST_{band.capitalize()}_1km" and qc_band == f"QC_{band.capitalize()}"
+        values = np.array([[[_kelvin(celsius)] * 2] * 2 for _, celsius in composites.values()], dtype="uint16")
+        coords = {
+            "time": np.array(list(composites), dtype="datetime64[ns]"),
+            "latitude": [27.5, 27.4],
+            "longitude": [85.0, 85.1],
+        }
+        dims = ("time", "latitude", "longitude")
+        return xr.Dataset({lst_band: (dims, values), qc_band: (dims, np.zeros_like(values))}, coords=coords)
+
+    monkeypatch.setattr(odc.stac, "load", load)
+
+    ds = lst.MODISLandSurfaceTemperatureMonthlyPlugin(band=band).fetch_period("2024-07", [85, 27, 86, 28])
+
+    variable = ds[f"lst_{band}"]
+    assert variable.dims == ("t", "y", "x") and variable.attrs["units"] == "degC"
+    assert ds.t.values[0] == np.datetime64("2024-07-01")
+    assert ds.rio.crs.to_epsg() == 4326
+    np.testing.assert_allclose(variable.values, (2 * 10 + 8 * 20 + 5 * 30) / 15, atol=0.02)
+
+
 def test_a_cell_with_no_good_composite_is_empty() -> None:
     values = xr.DataArray(np.array([[0], [0]], dtype="uint16"), dims=("time", "x"))
     qc = xr.DataArray(np.zeros((2, 1), dtype="uint16"), dims=("time", "x"))
