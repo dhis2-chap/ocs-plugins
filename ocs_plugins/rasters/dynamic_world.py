@@ -3,8 +3,9 @@
 Dynamic World (Google and the World Resources Institute) classifies every Sentinel-2 scene with at
 most 35 % cloud into nine classes at 10 m, within days of acquisition, from June 2015 on. A scene
 covers only part of a country and its clouds are masked, so one month's map is the most frequent
-class of each cell across that month's scenes. A cell that no scene saw clearly is no data (255),
-since class 0 is water.
+class of each cell across that month's scenes. A cell that no scene saw clearly is no data, stored
+as missing (NaN) since class 0 is water. A month is offered once its last scenes have had a week to
+arrive.
 
 The output grid is in degrees, ``pixel_degrees`` wide, 0.001 (about 110 m) by default: at 10 m a
 country is hundreds of millions of cells per month. The grid is requested at that size, so Earth
@@ -25,7 +26,7 @@ import calendar
 import math
 import os
 import threading
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, cast
 
 import numpy as np
@@ -35,7 +36,10 @@ from open_climate_service.streaming import BaseDatasetPlugin
 
 _COLLECTION = "GOOGLE/DYNAMICWORLD/V1"
 _FIRST_MONTH = "2015-07"  # the record starts on 27 June 2015, so July is the first full month
-_NO_DATA = 255
+_NO_DATA = 255  # Earth Engine's code for a cell with no scene, read back as missing
+# Scenes reach Earth Engine days after acquisition, and a stored month is not read again (append),
+# so a month is offered only once its last scenes have had this long to arrive.
+_SETTLE = timedelta(days=7)
 # The endpoint Earth Engine provides for many parallel automated requests, which Xee makes.
 _HIGH_VOLUME = "https://earthengine-highvolume.googleapis.com"
 _SCOPES = ["https://www.googleapis.com/auth/earthengine", "https://www.googleapis.com/auth/cloud-platform"]
@@ -57,8 +61,8 @@ def _ee() -> Any:
                     "Dynamic World needs EARTHENGINE_PROJECT set to a Google Cloud project registered for Earth Engine"
                 )
             # The client does not read a service account key by itself: it only finds the
-            # credentials `earthengine authenticate` stored, so a key file is loaded here.
-            credentials = None
+            # credentials `earthengine authenticate` stored ("persistent"), so a key file is loaded here.
+            credentials: Any = "persistent"
             if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
                 import google.auth
 
@@ -68,10 +72,10 @@ def _ee() -> Any:
     return ee
 
 
-def _months(start: str, end: str) -> list[str]:
-    """Months from ``start`` to ``end`` that are complete and within the record, as ``YYYY-MM``."""
-    today = date.today()
-    last_complete = (today.year, today.month - 1) if today.month > 1 else (today.year - 1, 12)
+def _months(start: str, end: str, today: date | None = None) -> list[str]:
+    """Months from ``start`` to ``end`` that are complete, settled and within the record, as ``YYYY-MM``."""
+    settled = (today or date.today()) - _SETTLE
+    last_complete = (settled.year, settled.month - 1) if settled.month > 1 else (settled.year - 1, 12)
     first = max((int(start[:4]), int(start[5:7])), (int(_FIRST_MONTH[:4]), int(_FIRST_MONTH[5:7])))
     last = min((int(end[:4]), int(end[5:7])), last_complete)
     months = []
@@ -92,7 +96,7 @@ def _grid(bbox: list[float], pixel: float) -> tuple[float, float, int, int]:
 
 
 class DynamicWorldPlugin(BaseDatasetPlugin):
-    """Most frequent Dynamic World class of each cell in a month (0 water ... 8 snow and ice; 255 no data)."""
+    """Most frequent Dynamic World class of each cell in a month (0 water ... 8 snow and ice; NaN no data)."""
 
     # One month at a time; Xee already reads each month in parallel requests.
     max_concurrency = 1
@@ -123,7 +127,7 @@ class DynamicWorldPlugin(BaseDatasetPlugin):
 
     def fetch_period(self, period_id: str, bbox: list[float], **_: Any) -> xr.Dataset:
         west, north, width, height = _grid(bbox, self._pixel)
-        classes = np.full((height, width), _NO_DATA, dtype="uint8")
+        classes = np.full((height, width), np.nan, dtype="float32")
         month = self._composite(period_id, bbox)
         if month is not None:
             read = xr.open_dataset(
@@ -133,12 +137,12 @@ class DynamicWorldPlugin(BaseDatasetPlugin):
                 crs_transform=(self._pixel, 0, west, 0, -self._pixel, north),
                 shape_2d=(width, height),
             )
-            # Xee reads the grid as floats; the classes and the no data code are whole bytes.
-            classes = read["label"].isel(time=0).transpose("y", "x").values.astype("uint8")
+            # Missing, not a code: a cell that is no class counts towards none in the statistics.
+            classes = read["label"].isel(time=0).transpose("y", "x").values.astype("float32")
+            classes[classes == _NO_DATA] = np.nan
 
         x = west + (np.arange(width) + 0.5) * self._pixel
         y = north - (np.arange(height) + 0.5) * self._pixel
         landcover = xr.DataArray(classes, dims=("y", "x"), coords={"y": y, "x": x}, attrs={"units": "1"})
-        landcover.encoding = {"_FillValue": np.uint8(_NO_DATA)}
         ds = landcover.to_dataset(name="landcover").rio.write_crs("EPSG:4326")
         return cast(xr.Dataset, ds.expand_dims({"t": [np.datetime64(f"{period_id}-01", "ns")]}))

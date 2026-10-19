@@ -49,8 +49,9 @@ def _fake_ee(monkeypatch: pytest.MonkeyPatch, scenes: int = 3) -> tuple[list[dic
     def open_dataset(collection: Any, **kwargs: Any) -> xr.Dataset:
         reads.append(kwargs)
         width, height = kwargs["shape_2d"]
-        # Row r, column c holds (r + 2c) % 9, as floats like Xee returns.
+        # Row r, column c holds (r + 2c) % 9, as floats like Xee returns; the corner cell no scene saw.
         values = (np.arange(height)[:, None] + 2 * np.arange(width)[None, :]) % 9
+        values[0, 0] = 255
         label = xr.DataArray(values[None].astype("float32"), dims=("time", "y", "x"))
         return xr.Dataset({"label": label})
 
@@ -68,6 +69,12 @@ def test_months_are_complete_months_within_the_record() -> None:
     assert this_month not in recent and recent[-1] < this_month
 
 
+def test_a_month_is_offered_once_its_last_scenes_have_had_a_week() -> None:
+    """Scenes arrive days after acquisition, and an appended month is not read again."""
+    assert dynamic_world._months("2026-08", "2026-12", today=date(2026, 10, 7))[-1] == "2026-08"
+    assert dynamic_world._months("2026-08", "2026-12", today=date(2026, 10, 8))[-1] == "2026-09"
+
+
 def test_the_month_is_read_on_the_output_grid(monkeypatch: pytest.MonkeyPatch) -> None:
     reads, calls = _fake_ee(monkeypatch)
     bbox = [30.0, -2.25, 30.25, -2.0]  # 250 x 250 cells at 0.001 degrees
@@ -83,8 +90,9 @@ def test_the_month_is_read_on_the_output_grid(monkeypatch: pytest.MonkeyPatch) -
         }
     ]
     landcover = ds["landcover"].isel(t=0)
-    assert landcover.dtype == np.uint8 and landcover.shape == (250, 250)
+    assert landcover.shape == (250, 250)
     assert int(landcover[1, 0]) == 1 and int(landcover[0, 1]) == 2  # rows are y, columns are x
+    assert np.isnan(landcover[0, 0])  # no data is missing, not a code: 0 is water
     assert float(landcover.x[0]) == pytest.approx(30.0005) and float(landcover.y[0]) == pytest.approx(-2.0005)
     assert ds["t"].values[0] == np.datetime64("2024-03-01")
     # Requested at the output grid directly: no 10 m aggregation of the month, which runs out of memory.
@@ -97,7 +105,7 @@ def test_a_month_without_scenes_is_no_data(monkeypatch: pytest.MonkeyPatch) -> N
     ds = dynamic_world.DynamicWorldPlugin().fetch_period("2015-07", [30.0, -2.01, 30.01, -2.0])
 
     assert not reads
-    assert set(np.unique(ds["landcover"].values)) == {255}
+    assert np.isnan(ds["landcover"].values).all()
 
 
 def test_a_missing_project_says_what_to_set(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -125,3 +133,17 @@ def test_a_service_account_key_is_passed_to_earth_engine(monkeypatch: pytest.Mon
     dynamic_world._ee()
 
     assert initialised == [("service-account", "instance-project", "https://earthengine-highvolume.googleapis.com")]
+
+
+def test_without_a_key_earth_engine_uses_the_stored_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`earthengine authenticate` stores them, and the client finds them only when asked for "persistent"."""
+    initialised: list[Any] = []
+    fake_ee = SimpleNamespace(Initialize=lambda credentials, project, opt_url: initialised.append(credentials))
+    monkeypatch.setitem(sys.modules, "ee", fake_ee)
+    monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
+    monkeypatch.setenv("EARTHENGINE_PROJECT", "instance-project")
+    monkeypatch.setattr(dynamic_world, "_initialised", False)
+
+    dynamic_world._ee()
+
+    assert initialised == ["persistent"]

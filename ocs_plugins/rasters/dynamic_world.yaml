@@ -48,6 +48,5 @@
     - name: Google Earth Engine
       url: https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_DYNAMICWORLD_V1
   display:
-    nodata: 255
     colormap: viridis
     range: [0, 8]
