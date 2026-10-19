@@ -1,0 +1,85 @@
+- id: modis_lst_day_monthly
+  name: Land surface temperature, day (MODIS Terra, monthly)
+  short_name: LST (day, monthly)
+  description: >-
+    How hot the ground is in the late morning, at 1 km, worldwide, monthly from March 2000, in
+    degrees Celsius, from MODIS Terra 8-day composites (MOD11A2). Not air temperature: over dry
+    ground it reads 10-20 °C warmer. Clear-sky only, so a cloudy month has fewer cells and a mean
+    biased warm; only values with an error of at most 2 K are kept. MODIS science collection ends
+    in 2027. Needs no account.
+  standard_name: surface_temperature
+  variable: lst_day
+  period_type: monthly
+  sync:
+    kind: temporal
+    execution: append
+  extents:
+    spatial:
+      bbox: [-180, -90, 180, 90]
+    temporal:
+      begin: "2000-03"
+      resolution: P1M
+  ingestion:
+    plugin: ocs_plugins.rasters.modis_lst_monthly.MODISLandSurfaceTemperatureMonthlyPlugin
+    params:
+      band: day
+  units: degC
+  cell_methods: "time: mean"
+  resolution: 1 km x 1 km
+  source: MODIS Terra MOD11A2 v061 (NASA LP DAAC)
+  source_url: https://planetarycomputer.microsoft.com/dataset/modis-11A2-061
+  license:
+    name: NASA Earth Science Data
+    url: https://www.earthdata.nasa.gov/engage/open-data-services-software-policies/data-use-guidance
+  providers:
+    - name: NASA LP DAAC
+      url: https://lpdaac.usgs.gov/products/mod11a2v061/
+    - name: Microsoft Planetary Computer
+      url: https://planetarycomputer.microsoft.com/
+  display:
+    # Diverging about 0 °C, the freeze/thaw line, and the same scale for day and night so a
+    # colour means the same temperature in both.
+    colormap: rdbu_r
+    range: [-40.0, 40.0]
+
+- id: modis_lst_night_monthly
+  name: Land surface temperature, night (MODIS Terra, monthly)
+  short_name: LST (night, monthly)
+  description: >-
+    How cold the ground gets around 22:30, at 1 km, worldwide, monthly from March 2000, in
+    degrees Celsius, from MODIS Terra 8-day composites (MOD11A2). Not air temperature, though
+    closer to it than the day band. Clear-sky only, so a cloudy month has fewer cells and a mean
+    biased cold; only values with an error of at most 2 K are kept. MODIS science collection ends
+    in 2027. Needs no account.
+  standard_name: surface_temperature
+  variable: lst_night
+  period_type: monthly
+  sync:
+    kind: temporal
+    execution: append
+  extents:
+    spatial:
+      bbox: [-180, -90, 180, 90]
+    temporal:
+      begin: "2000-03"
+      resolution: P1M
+  ingestion:
+    plugin: ocs_plugins.rasters.modis_lst_monthly.MODISLandSurfaceTemperatureMonthlyPlugin
+    params:
+      band: night
+  units: degC
+  cell_methods: "time: mean"
+  resolution: 1 km x 1 km
+  source: MODIS Terra MOD11A2 v061 (NASA LP DAAC)
+  source_url: https://planetarycomputer.microsoft.com/dataset/modis-11A2-061
+  license:
+    name: NASA Earth Science Data
+    url: https://www.earthdata.nasa.gov/engage/open-data-services-software-policies/data-use-guidance
+  providers:
+    - name: NASA LP DAAC
+      url: https://lpdaac.usgs.gov/products/mod11a2v061/
+    - name: Microsoft Planetary Computer
+      url: https://planetarycomputer.microsoft.com/
+  display:
+    colormap: rdbu_r
+    range: [-40.0, 40.0]
