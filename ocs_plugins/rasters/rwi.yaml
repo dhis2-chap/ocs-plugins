@@ -7,9 +7,9 @@
 # description below carries this to the published collection.
 #
 # The country is the instance's `extent.country_code` (ISO3). Coverage is low- and
-# middle-income countries only; an uncovered country fails naming itself. 16 of the 109 HDX
-# files are named by country slug rather than ISO3; for those, set `resource_filename` in the
-# ingestion params.
+# middle-income countries only. 16 of the 109 HDX files are named by country slug rather than
+# ISO3, and India and Pakistan share one; for those, set `resource_filename` in the ingestion
+# params.
 #
 # Ingest the single epoch, the April 2021 release:
 #
@@ -21,8 +21,7 @@
   short_name: Relative wealth
   description: >-
     Relative wealth for 2.4 km cells. Values rank areas WITHIN one country only, so they cannot
-    be compared between countries. `measure` holds `index` and `error`. Empty cells are unknown,
-    not zero.
+    be compared between countries. Empty cells are unknown, not zero.
   variable: rwi
   period_type: yearly
   sync:
@@ -38,8 +37,6 @@
       resolution: P1Y
   ingestion:
     plugin: ocs_plugins.rasters.rwi.RelativeWealthIndexPlugin
-    params:
-      variable: rwi
   units: "1"
   resolution: 2.4km x 2.4km (zoom-14 Web Mercator)
   source: Meta Relative Wealth Index via HDX (licence "Other", not confirmed CC BY)
