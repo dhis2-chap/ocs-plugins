@@ -46,6 +46,5 @@
     - name: AWS Open Data
       url: https://registry.opendata.aws/esa-worldcover-vito/
   display:
-    nodata: 0
     colormap: viridis
     range: [10, 100]
