@@ -68,6 +68,15 @@ def test_rebuilds_the_sparse_points_as_a_mercator_grid(monkeypatch: pytest.Monke
     np.testing.assert_array_equal(cube.values, np.array([[np.nan, 1.0, np.nan], [-0.5, np.nan, 0.5]], dtype="float32"))
 
 
+def test_a_cell_overlapping_the_extent_is_kept_though_its_centre_is_outside(monkeypatch: pytest.MonkeyPatch) -> None:
+    lon, lat = _lonlat(0, 0)
+    _serve(monkeypatch, [(lon, lat, 0.5)])
+
+    ds = rwi.RelativeWealthIndexPlugin().fetch_period("2021", [80, lat + 0.005, 89, 31], country_code="NPL")
+
+    assert float(ds["rwi"].isel(t=0).values.ravel()[0]) == 0.5
+
+
 def test_a_slug_named_file_is_fetched_by_resource_filename(monkeypatch: pytest.MonkeyPatch) -> None:
     fetched = _serve(monkeypatch, [(*_lonlat(0, 0), 0.0)])
     filename = f"bosnia-and-herzegovina{rwi._SUFFIX}"

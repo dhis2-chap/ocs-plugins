@@ -59,8 +59,13 @@ class RelativeWealthIndexPlugin(BaseDatasetPlugin):
         response = httpx.get(_resource_url(filename), timeout=300, follow_redirects=True).raise_for_status()
         points = pd.read_csv(io.BytesIO(response.content))
 
+        # Every cell that overlaps the extent, not only those centred in it: half a cell is at most
+        # 180 / 2**14 degrees in either direction.
         west, south, east, north = bbox
-        points = points[points.longitude.between(west, east) & points.latitude.between(south, north)]
+        pad = 180 / 2**14
+        points = points[
+            points.longitude.between(west - pad, east + pad) & points.latitude.between(south - pad, north + pad)
+        ]
         if points.empty:
             raise ValueError(f"No RWI points from {filename} fall inside the extent {bbox}")
 
