@@ -1,14 +1,19 @@
 # ocs-plugins
 
-Community dataset plugins for the [Open Climate Service](https://github.com/dhis2/open-climate-service) (OCS).
+Experimental dataset plugins for the [Open Climate Service](https://github.com/dhis2/open-climate-service)
+(OCS), for testing.
+
+> **Not for production.** Try these plugins and tell us what you find, but do not rely on them in
+> a production instance. They follow OCS `main` and can change or be removed without notice: a
+> dataset's id, variable or grid may change between versions, so a store may need ingesting again.
 
 OCS core holds datasets every instance can rely on: actively maintained and updated upstream
-sources from open providers, used beyond one country. This repository holds the rest: datasets
-that are useful for some instances but more specialised, read through commercial platforms, or
-near the end of their record. They install into any OCS instance as one package, and the ones
-that prove themselves can move to core later.
+sources from open providers, used beyond one country. This repository is where other datasets are
+tried out: ones that are more specialised, read through commercial platforms, or near the end of
+their record. They install into any OCS instance as one package, and the ones that prove
+themselves can move to core.
 
-## Use the plugins in an instance
+## Try the plugins in an instance
 
 The plugins are an installable OCS plugin package: once installed, OCS finds them through the
 `open_climate_service.plugins` entry point and lists their datasets under **Data sources**,
