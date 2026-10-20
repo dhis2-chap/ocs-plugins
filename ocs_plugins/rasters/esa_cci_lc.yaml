@@ -27,7 +27,7 @@
     params:
       block: 3
   units: "1"
-  cell_methods: "area: fraction"
+  cell_methods: "area: mean"
   resolution: 1 km x 1 km
   source: ESA CCI / C3S land cover v2.0.7 and v2.1.1 (Copernicus Climate Data Store)
   source_url: https://cds.climate.copernicus.eu/datasets/satellite-land-cover
