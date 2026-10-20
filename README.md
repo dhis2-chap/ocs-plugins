@@ -72,6 +72,7 @@ which take precedence over the built-ins.
 | `esa_worldcover_2021` | yearly | ESA WorldCover 10 m land cover, 2021 (AWS Open Data) | none |
 | `modis_landcover_yearly` | yearly | MODIS MCD12Q1 v061 land cover, IGBP classes, from 2001 (NASA LP DAAC) | Earthdata Login |
 | `esacci_landcover_fraction_yearly`, `esacci_landcover_class_yearly` | yearly | ESA CCI / C3S land cover, 1992–2022 (Copernicus CDS) | CDS key, dataset licence accepted |
+| `worldpop_agesex_global2_100m` | yearly | WorldPop Global2 population by age and sex, 100 m, 2015–2030; slow to ingest, about 40 GeoTIFFs per country-year (WorldPop) | none |
 | `rwi` | yearly | Meta Relative Wealth Index, 2021, for the instance's `extent.country_code`, low- and middle-income countries only (HDX) | none |
 | `copdem90_elevation_static` | static | Copernicus DEM GLO-90 (AWS Open Data); the 30 m DEM is in OCS core | none |
 
