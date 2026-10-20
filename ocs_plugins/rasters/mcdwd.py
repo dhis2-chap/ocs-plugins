@@ -70,7 +70,10 @@ class MCDWDFloodDailyPlugin(BaseDatasetPlugin):
         extent = get_extent()
         bbox = list(extent["bbox"]) if extent else [-180.0, -90.0, 180.0, 90.0]
         granules = await asyncio.to_thread(self._granules, first, last, bbox)
-        return sorted({g["time_start"][:10] for g in granules})
+        # A 2- or 3-day composite overlaps the days after its start, so the search also finds ones
+        # starting before ``first``; those days were not asked for.
+        days = {g["time_start"][:10] for g in granules}
+        return sorted(day for day in days if first.isoformat() <= day <= last.isoformat())
 
     def fetch_period(self, period_id: str, bbox: list[float], **_: Any) -> xr.Dataset:
         import rioxarray
