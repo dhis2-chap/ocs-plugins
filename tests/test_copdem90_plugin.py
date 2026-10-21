@@ -1,6 +1,6 @@
 """Copernicus DEM GLO-90 from the AWS bucket: tile selection, grid and mosaic.
 
-`fetch_period` runs for real against GeoTIFF tiles laid out like the bucket's, so the grid
+`fetch` runs for real against GeoTIFF tiles laid out like the bucket's, so the grid
 alignment and the gaps left by ocean tiles are checked on the path an ingest takes.
 """
 
@@ -61,10 +61,11 @@ def test_mosaic_is_on_the_native_grid_and_ocean_is_nan(local_bucket: Path, monke
     land = _write_tile(local_bucket, -2, 29, 1500.0)
     _use_tiles(monkeypatch, [land])  # the tile to the west, at 28 E, is ocean: absent from the bucket
 
-    ds = copdem90.CopDEM90Plugin().fetch_period("2021", [28.5, -1.5, 29.5, -1.25])
-    elevation = ds["elevation"].isel(t=0)
+    ds = copdem90.CopDEM90Plugin().fetch([28.5, -1.5, 29.5, -1.25])
+    elevation = ds["elevation"]
 
     assert ds.rio.crs.to_epsg() == 4326
+    assert elevation.dims == ("y", "x")  # elevation has no time axis
     # Pixel centres sit on whole multiples of the pixel size, as in the tiles themselves.
     assert np.allclose(elevation.x.values * PER_DEGREE, np.round(elevation.x.values * PER_DEGREE))
     assert np.allclose(elevation.y.values * PER_DEGREE, np.round(elevation.y.values * PER_DEGREE))
@@ -81,7 +82,7 @@ def test_wide_pixel_tiles_are_resampled_onto_the_common_grid(
     tile = _write_tile(local_bucket, 59, 10, 300.0, width=PER_DEGREE * 2 // 3)
     _use_tiles(monkeypatch, [tile])
 
-    elevation = copdem90.CopDEM90Plugin().fetch_period("2021", [10.2, 59.2, 10.4, 59.4])["elevation"]
+    elevation = copdem90.CopDEM90Plugin().fetch([10.2, 59.2, 10.4, 59.4])["elevation"]
 
     assert elevation.sizes["x"] == elevation.sizes["y"] == round(0.2 * PER_DEGREE) + 1
     assert np.allclose(elevation.values, 300.0)
@@ -97,7 +98,7 @@ def test_an_extent_on_whole_degrees_takes_its_edges_from_the_neighbouring_tiles(
     ]
     _use_tiles(monkeypatch, tiles)
 
-    elevation = copdem90.CopDEM90Plugin().fetch_period("2021", [29, -2, 30, -1])["elevation"].isel(t=0)
+    elevation = copdem90.CopDEM90Plugin().fetch([29, -2, 30, -1])["elevation"]
 
     assert not np.isnan(elevation).any()
     assert float(elevation.sel(x=29.5, y=-1.5, method="nearest")) == 100.0
@@ -109,4 +110,4 @@ def test_an_extent_on_whole_degrees_takes_its_edges_from_the_neighbouring_tiles(
 def test_an_extent_with_no_tiles_fails_clearly(monkeypatch: pytest.MonkeyPatch) -> None:
     _use_tiles(monkeypatch, [])
     with pytest.raises(RuntimeError, match="No Copernicus DEM tiles"):
-        copdem90.CopDEM90Plugin().fetch_period("2021", [-30.5, 0.5, -30.0, 1.0])
+        copdem90.CopDEM90Plugin().fetch([-30.5, 0.5, -30.0, 1.0])

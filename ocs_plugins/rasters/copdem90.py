@@ -6,14 +6,14 @@ which tiles to read, and cells without a tile are NaN. Only the windows inside t
 read, over HTTP range requests. The 30 m DEM is in OCS core (``copdem30_elevation_static``).
 
 Tiles above 50 degrees latitude are stored with wider pixels in longitude; they are resampled
-bilinearly onto the common grid. The static dataset is represented as a single yearly period;
-2021 is the year the release was published.
+bilinearly onto the common grid. Elevation does not refer to a period, so the plugin implements
+``fetch`` and the store is ``(y, x)``, with no time axis.
 """
 
 import math
 import urllib.request
 from functools import lru_cache
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import xarray as xr
@@ -21,7 +21,6 @@ from open_climate_service.streaming import BaseDatasetPlugin
 
 _BUCKET = "https://copernicus-dem-90m.s3.amazonaws.com"
 _RES = 1 / 1200
-_PERIOD = "2021"
 
 
 @lru_cache(maxsize=1)
@@ -59,9 +58,6 @@ class CopDEM90Plugin(BaseDatasetPlugin):
 
     res = _RES
 
-    async def periods(self, start: str, end: str) -> list[str]:
-        return [_PERIOD] if int(start[:4]) <= int(_PERIOD) <= int(end[:4]) else []
-
     def _tiles_for(self, bbox: list[float]) -> list[str]:
         """The tiles holding the output's pixel centres.
 
@@ -80,7 +76,7 @@ class CopDEM90Plugin(BaseDatasetPlugin):
         available = _available_tiles()
         return [name for name in names if name in available]
 
-    def fetch_period(self, period_id: str, bbox: list[float], **_: Any) -> xr.Dataset:
+    def fetch(self, bbox: list[float], **_: Any) -> xr.Dataset:
         import rasterio
         import rasterio.merge
         import rioxarray  # noqa: F401  # pyright: ignore[reportUnusedImport]  # activates the .rio accessor
@@ -108,5 +104,4 @@ class CopDEM90Plugin(BaseDatasetPlugin):
         x = transform.c + (np.arange(width) + 0.5) * transform.a
         y = transform.f + (np.arange(height) + 0.5) * transform.e
         elevation = xr.DataArray(mosaic[0], dims=("y", "x"), coords={"y": y, "x": x}, attrs={"units": "m"})
-        ds = elevation.to_dataset(name="elevation").rio.write_crs("EPSG:4326")
-        return cast(xr.Dataset, ds.expand_dims({"t": [np.datetime64(period_id, "ns")]}))
+        return elevation.to_dataset(name="elevation").rio.write_crs("EPSG:4326")
