@@ -1,6 +1,6 @@
 # ocs-plugins
 
-Experimental dataset plugins for the [Open Climate Service](https://github.com/dhis2/open-climate-service)
+Experimental dataset plugins and processes for the [Open Climate Service](https://github.com/dhis2/open-climate-service)
 (OCS), for testing.
 
 > **Not for production.** Try these plugins and tell us what you find, but do not rely on them in
@@ -92,6 +92,20 @@ before publishing the layer anywhere public, and cite Chi, Fang, Chatterjee & Bl
 "Microestimates of wealth for all low- and middle-income countries", PNAS 2022
 ([doi:10.1073/pnas.2113658119](https://doi.org/10.1073/pnas.2113658119)).
 
+## Processes
+
+| Id | Kind | What it does |
+|---|---|---|
+| `aggregate_spatial_population_weighted` | openEO process | The population-weighted mean of a raster per feature and time step, `sum(value × population) / sum(population)`, with a population raster such as WorldPop as `weights` |
+
+A population-weighted mean gives the heat or rainfall where people live rather than averaged over
+empty land. It differs from OCS core's `aggregate_spatial_weighted`, which weights each cell by
+how much of it the feature covers. Here a cell counts if its centre is inside the feature, so use
+a population raster much finer than the smallest feature: at 1 km, a small unit can have few or
+no cells. Cells with no data or no people are left out, and a feature with none left has no
+value rather than 0. The population is averaged to one surface if it has several years, and
+stays on its own grid: each population cell takes the climate value of the cell it lies in.
+
 ## Credentials
 
 - **Copernicus CDS, ADS and EWDS:** one key from your [CDS profile](https://cds.climate.copernicus.eu/profile),
@@ -155,10 +169,12 @@ template beside it, the template's `ingestion.plugin` naming the class by its fu
 (`ocs_plugins.rasters.<module>.<Class>`). Each plugin should name its source, its licence and
 what access it needs. See OCS's [Adding custom datasets](https://github.com/dhis2/open-climate-service/blob/main/docs/adding_custom_datasets.md)
 and [Installable plugins](https://github.com/dhis2/open-climate-service/blob/main/docs/installable_plugins.md) guides.
+An openEO process goes in `ocs_plugins/processes/` as a `@process` function.
 
 ## Credits
 
 Most of the plugins were written by Knut Rand ([@knutdrand](https://github.com/knutdrand)) for a
 climate–health use case, first proposed for OCS core in dhis2/open-climate-service#459–#464.
 The Copernicus Land Monitoring Service GPP and NPP plugin is based on the ones written for the
-Uganda and Malawi climate service instances by Diana Nanyanzi and Yambanso.
+Uganda and Malawi climate service instances by Diana Nanyanzi and Yambanso. The population-weighted
+aggregation follows the DHIS2 Climate Tools [population weighting guide](https://climate-tools.dhis2.org/guides/aggregation/population-weighting/).
