@@ -6,20 +6,12 @@
     Height above sea level at 90 m, worldwide. A surface model, so it records the top of tree
     canopy and buildings rather than bare ground. Needs no account, and at 90 m a whole country
     fits comfortably. The 30 m DEM is in OCS core (copdem30_elevation_static).
-  period_type: yearly
+  # No period_type: elevation has no time axis, so the store is (y, x).
   sync:
-    kind: release
-    execution: rematerialize
-    version:
-      value: "2021_1"
-      authority: copernicus
+    kind: static
   extents:
     spatial:
       bbox: [-180, -90, 180, 90]
-    temporal:
-      begin: "2021"
-      end: "2021"
-      resolution: P1Y
   ingestion:
     plugin: ocs_plugins.rasters.copdem90.CopDEM90Plugin
   standard_name: surface_altitude
