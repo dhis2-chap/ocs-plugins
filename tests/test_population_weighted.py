@@ -1,4 +1,4 @@
-"""The population-weighted aggregation reaches OCS through the entry point and weights by population."""
+"""The population-weighted aggregation process reaches OCS through the entry point and weights by population."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import math
 
 import numpy as np
 import xarray as xr
-from open_climate_service.openeo import plugin_processes, workflows
+from open_climate_service.openeo import plugin_processes
 
 from ocs_plugins.processes.aggregate_spatial_population_weighted import aggregate_spatial_population_weighted
 
@@ -30,11 +30,9 @@ def _grid(values: list[list[float]], times: list[str] | None = None) -> xr.DataA
     return xr.DataArray(data, dims=("t", "y", "x"), coords={"t": t, "y": Y, "x": X})
 
 
-def test_the_process_and_its_workflow_are_discovered_through_the_entry_point() -> None:
+def test_the_process_is_discovered_through_the_entry_point() -> None:
     processes = {func.__name__ for func in plugin_processes._scan_plugin_package_processes()}
     assert "aggregate_spatial_population_weighted" in processes
-    ids = {record["id"] for record in workflows._load_entry_point_workflows()}
-    assert "aggregate_population_weighted_chap" in ids
 
 
 def test_the_mean_is_weighted_by_population() -> None:

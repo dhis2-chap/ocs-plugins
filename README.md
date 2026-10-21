@@ -92,12 +92,11 @@ before publishing the layer anywhere public, and cite Chi, Fang, Chatterjee & Bl
 "Microestimates of wealth for all low- and middle-income countries", PNAS 2022
 ([doi:10.1073/pnas.2113658119](https://doi.org/10.1073/pnas.2113658119)).
 
-## Processes and workflows
+## Processes
 
 | Id | Kind | What it does |
 |---|---|---|
 | `aggregate_spatial_population_weighted` | openEO process | The population-weighted mean of a raster per feature and time step, `sum(value × population) / sum(population)`, with a population raster such as WorldPop as `weights` |
-| `aggregate_population_weighted_chap` | workflow | Loads a climate and a population dataset, applies the process above to the given features, and saves Chap CSV |
 
 A population-weighted mean gives the heat or rainfall where people live rather than averaged over
 empty land. It differs from OCS core's `aggregate_spatial_weighted`, which weights each cell by
@@ -170,8 +169,7 @@ template beside it, the template's `ingestion.plugin` naming the class by its fu
 (`ocs_plugins.rasters.<module>.<Class>`). Each plugin should name its source, its licence and
 what access it needs. See OCS's [Adding custom datasets](https://github.com/dhis2/open-climate-service/blob/main/docs/adding_custom_datasets.md)
 and [Installable plugins](https://github.com/dhis2/open-climate-service/blob/main/docs/installable_plugins.md) guides.
-An openEO process goes in `ocs_plugins/processes/` as a `@process` function, and a workflow in
-`ocs_plugins/workflows/` as a process graph JSON file.
+An openEO process goes in `ocs_plugins/processes/` as a `@process` function.
 
 ## Credits
 
