@@ -104,7 +104,7 @@ how much of it the feature covers. Here a cell counts if its centre is inside th
 a population raster much finer than the smallest feature: at 1 km, a small unit can have few or
 no cells. Cells with no data or no people are left out, and a feature with none left has no
 value rather than 0. The population is averaged to one surface if it has several years, and
-matched to the climate grid by nearest neighbour.
+stays on its own grid: each population cell takes the climate value of the cell it lies in.
 
 ## Credentials
 
