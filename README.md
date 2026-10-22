@@ -92,11 +92,13 @@ before publishing the layer anywhere public, and cite Chi, Fang, Chatterjee & Bl
 "Microestimates of wealth for all low- and middle-income countries", PNAS 2022
 ([doi:10.1073/pnas.2113658119](https://doi.org/10.1073/pnas.2113658119)).
 
-## Processes
+## Processes and workflows
 
 | Id | Kind | What it does |
 |---|---|---|
 | `aggregate_spatial_population_weighted` | openEO process | The population-weighted mean of a raster per feature and time step, `sum(value × population) / sum(population)`, with a population raster such as WorldPop as `weights` |
+| `remap_classes` | openEO process | Merges the classes of a categorical raster into named groups, and records the groups as its classes |
+| `esacci_landcover_groups` | workflow | ESA CCI land cover (OCS core's `esacci_landcover_class_yearly`) in ten groups: cropland, tree_cover, shrubland, grassland, sparse_vegetation, wetland, urban, bare, water and snow_ice |
 
 A population-weighted mean gives the heat or rainfall where people live rather than averaged over
 empty land. It differs from OCS core's `aggregate_spatial_weighted`, which weights each cell by
@@ -105,6 +107,25 @@ a population raster much finer than the smallest feature: at 1 km, a small unit 
 no cells. Cells with no data or no people are left out, and a feature with none left has no
 value rather than 0. The population is averaged to one surface if it has several years, and
 stays on its own grid: each population cell takes the climate value of the cell it lies in.
+
+Land cover groups go before OCS core's `aggregate_spatial_classes`, which then gives each
+group's share of each feature (`share`), the group covering most of it (`majority`), or a weight
+such as population per group (`total`), labelled with the group names:
+
+```json
+{
+  "groups": {"process_id": "esacci_landcover_groups", "arguments": {"temporal_extent": ["2022-01-01", "2022-12-31"]}},
+  "share": {"process_id": "aggregate_spatial_classes",
+            "arguments": {"data": {"from_node": "groups"}, "geometries": {"type": "FeatureCollection", "features": []}, "reducer": "share"}},
+  "save": {"process_id": "save_result", "arguments": {"data": {"from_node": "share"}, "format": "CSV"}, "result": true}
+}
+```
+
+Merging the classes before the aggregation, rather than adding up class shares after it, keeps
+`majority` right: three tree classes at 25% each cover more than one cropland class at 30%.
+`remap_classes` also replaces the cube's classes with the groups. Without that, as with a remap
+through the standard `apply` and `array_element`, the aggregation would still look for the
+original classes. A class in no group, and a missing cell, become missing.
 
 ## Credentials
 
@@ -169,7 +190,8 @@ template beside it, the template's `ingestion.plugin` naming the class by its fu
 (`ocs_plugins.rasters.<module>.<Class>`). Each plugin should name its source, its licence and
 what access it needs. See OCS's [Adding custom datasets](https://github.com/dhis2/open-climate-service/blob/main/docs/adding_custom_datasets.md)
 and [Installable plugins](https://github.com/dhis2/open-climate-service/blob/main/docs/installable_plugins.md) guides.
-An openEO process goes in `ocs_plugins/processes/` as a `@process` function.
+An openEO process goes in `ocs_plugins/processes/` as a `@process` function, and a workflow in
+`ocs_plugins/workflows/` as a process graph JSON file.
 
 ## Credits
 
