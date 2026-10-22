@@ -29,27 +29,36 @@ def _group_name(label: str) -> str:
     return name
 
 
-def _lookup(groups: dict[str, list[int]]) -> tuple[np.ndarray, list[str]]:
-    """A table from class code to group code (1, 2, ... in the order given), and the group names."""
+def _class_code(value: Any) -> int:
+    """A class code as an int, refusing a value that only converts to one: 10.9 or ``true``."""
+    if isinstance(value, bool) or not isinstance(value, int | float) or value != int(value):
+        raise ValueError(f"remap_classes: class code {value!r} is not a whole number")
+    if value < 0:
+        raise ValueError(f"remap_classes: class code {value} is negative")
+    return int(value)
+
+
+def _lookup(groups: dict[str, list[int]]) -> tuple[np.ndarray, np.ndarray, list[str]]:
+    """The sorted class codes, each one's group code (1, 2, ... in order), and the group names.
+
+    Sorted codes keep the table as small as the mapping, whatever the codes' values.
+    """
     if not groups:
         raise ValueError("remap_classes: groups is empty")
     group_of: dict[int, int] = {}
     names: list[str] = []
     for group_code, (label, codes) in enumerate(groups.items(), start=1):
         names.append(_group_name(str(label)))
-        for code in codes:
-            code = int(code)
-            if code < 0:
-                raise ValueError(f"remap_classes: class code {code} is negative")
+        for value in codes:
+            code = _class_code(value)
             if code in group_of:
                 raise ValueError(f"remap_classes: class {code} is in more than one group")
             group_of[code] = group_code
     if len(set(names)) != len(names):
         raise ValueError(f"remap_classes: group names must differ, got {names}")
-    table = np.full(max(group_of, default=0) + 1, np.nan, dtype="float32")
-    for code, group_code in group_of.items():
-        table[code] = group_code
-    return table, names
+    codes = np.array(sorted(group_of), dtype="float64")
+    group_codes = np.array([group_of[int(code)] for code in codes], dtype="float32")
+    return codes, group_codes, names
 
 
 @process(
@@ -67,12 +76,17 @@ def remap_classes(data: Any, groups: dict[str, list[int]]) -> xr.DataArray:
         if len(data.data_vars) != 1:
             raise ValueError(f"remap_classes: expected a single-variable raster, got {list(data.data_vars)}")
         data = data[next(iter(data.data_vars))]
-    table, names = _lookup(groups)
+    codes, group_codes, names = _lookup(groups)
 
     def remap(values: np.ndarray) -> np.ndarray:
         out = np.full(values.shape, np.nan, dtype="float32")
-        known = np.isfinite(values) & (values >= 0) & (values < table.size) & (values == np.floor(values))
-        out[known] = table[values[known].astype(np.intp)]
+        finite = np.isfinite(values)
+        position = np.searchsorted(codes, values[finite])
+        found = position < codes.size
+        found[found] = codes[position[found]] == values[finite][found]
+        mapped = np.full(position.shape, np.nan, dtype="float32")
+        mapped[found] = group_codes[position[found]]
+        out[finite] = mapped
         return out
 
     result: xr.DataArray = xr.apply_ufunc(remap, data, dask="parallelized", output_dtypes=[np.float32])

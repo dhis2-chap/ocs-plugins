@@ -82,11 +82,23 @@ def test_the_majority_is_the_group_covering_most() -> None:
         ({"a": [10], "b": [10]}, "class 10 is in more than one group"),
         ({"a": [10], "A ": [50], "a!": [60]}, "group names must differ"),
         ({"!!!": [10]}, "has no letters or digits"),
+        ({"a": [10.9]}, "class code 10.9 is not a whole number"),
+        ({"a": [True]}, "class code True is not a whole number"),
+        ({"a": ["10"]}, "class code '10' is not a whole number"),
+        ({"a": [-1]}, "class code -1 is negative"),
     ],
 )
 def test_malformed_groups_are_refused(groups: dict[str, list[int]], message: str) -> None:
     with pytest.raises(ValueError, match=message):
         remap_classes(_grid([[10]]), groups)
+
+
+def test_a_sparse_high_class_code_needs_no_table_of_its_size() -> None:
+    # A table indexed by code would need 2**30 entries here, 4 GiB of float32. (2**30 is exact in the
+    # float32 the grid is stored as.)
+    out = remap_classes(_grid([[10, 2**30, 50]]), {"low": [10], "high": [2**30, 50.0]})
+
+    np.testing.assert_equal(out.values, [[1, 2, 2]])
 
 
 def test_the_process_and_the_workflow_are_discovered_through_the_entry_point() -> None:
