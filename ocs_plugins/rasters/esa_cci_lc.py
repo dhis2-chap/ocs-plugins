@@ -1,16 +1,12 @@
 """ESA CCI / C3S land cover (300 m, yearly) from the Copernicus Climate Data Store (CDS).
 
-Two plugins over the same source:
-
-- ``ESACCILandCoverClassPlugin`` stores the class codes as published (the 37 LCCS classes,
-  ``lccs_class``), for display. Its pyramid must use ``mode`` resampling so coarse zoom levels
-  show a real class rather than an average of codes.
-- ``ESACCILandCoverFractionPlugin`` stores, for each of ten class groups, the fraction of each
-  output cell the group covers, along a ``land_cover_class`` dimension. Cells are blocks of
-  ``block`` x ``block`` native pixels (3 by default, about 1 km). Averaging a fraction layer
-  over a district with the existing ``mean`` aggregation gives the share of the district under
-  that group, so land cover goes through the same aggregation and export path as any other
-  continuous variable.
+``ESACCILandCoverFractionPlugin`` stores, for each of ten class groups, the fraction of each
+output cell the group covers, along a ``land_cover_class`` dimension. Cells are blocks of
+``block`` x ``block`` native pixels (3 by default, about 1 km). Averaging a fraction layer over a
+district with the existing ``mean`` aggregation gives the share of the district under that
+group, so land cover goes through the same aggregation and export path as any other continuous
+variable. The class codes themselves are OCS core's ``esacci_landcover_class_yearly``, whose
+``aggregate_spatial_classes`` ``share`` gives each class's share of a district directly.
 
 The groups follow the IPCC land categories the CCI user guide maps LCCS classes onto, with
 shrubland, sparse vegetation and bare areas kept apart because they matter in drylands.
@@ -106,19 +102,6 @@ def _with_time(ds: xr.Dataset, year: str) -> xr.Dataset:
 
     ds = ds.rio.write_crs("EPSG:4326")
     return ds.expand_dims({"t": [np.datetime64(f"{year}-01-01", "ns")]})
-
-
-class ESACCILandCoverClassPlugin(BaseDatasetPlugin):
-    """Yearly LCCS land cover class codes (uint8; 0 is no data)."""
-
-    async def periods(self, start: str, end: str) -> list[str]:
-        return _years(start, end)
-
-    def fetch_period(self, period_id: str, bbox: list[float], **_: Any) -> xr.Dataset:
-        classes = _load_classes(period_id, bbox)
-        classes = classes.where(classes != _NO_DATA).astype("float32")
-        classes.attrs = {"units": "1", "flag_meanings": "LCCS class codes, see the template description"}
-        return _with_time(classes.to_dataset(name="lccs_class"), period_id)
 
 
 class ESACCILandCoverFractionPlugin(BaseDatasetPlugin):

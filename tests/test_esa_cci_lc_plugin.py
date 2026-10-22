@@ -69,16 +69,13 @@ def test_classes_are_read_on_the_native_grid(monkeypatch: pytest.MonkeyPatch, zi
     cds = FakeCds(_codes(), zipped=zipped)
     monkeypatch.setattr(esa_cci_lc, "_CdsClient", cds)
 
-    ds = esa_cci_lc.ESACCILandCoverClassPlugin().fetch_period("2022", BBOX)
-    classes = ds["lccs_class"].isel(t=0)
+    classes = esa_cci_lc._load_classes("2022", BBOX)
 
-    assert ds.rio.crs.to_epsg() == 4326
     assert classes.dims == ("y", "x") and classes.sizes == {"y": 36, "x": 36}
     assert float(classes.y[0]) > float(classes.y[-1])  # north first
-    assert np.isnan(classes.isel(y=0)).all()
+    assert (classes.isel(y=0) == 0).all()  # no data
     assert (classes.isel(y=slice(1, None), x=slice(0, 18)) == 10).all()
     assert (classes.isel(y=slice(1, None), x=slice(18, None)) == 50).all()
-    assert ds.t.values[0] == np.datetime64("2022-01-01")
 
 
 @pytest.mark.parametrize(("year", "version"), [("2015", "v2_0_7cds"), ("2016", "v2_1_1")])
@@ -88,7 +85,7 @@ def test_the_request_names_the_extent_and_the_years_version(
     cds = FakeCds(_codes(), zipped=True)
     monkeypatch.setattr(esa_cci_lc, "_CdsClient", cds)
 
-    esa_cci_lc.ESACCILandCoverClassPlugin().fetch_period(year, BBOX)
+    esa_cci_lc.ESACCILandCoverFractionPlugin().fetch_period(year, BBOX)
 
     dataset, request = cds.requests[0]
     assert dataset == "satellite-land-cover"
@@ -99,9 +96,11 @@ def test_the_request_names_the_extent_and_the_years_version(
 def test_fractions_share_each_cell_between_the_groups(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(esa_cci_lc, "_CdsClient", FakeCds(_codes(), zipped=True))
 
-    fractions = esa_cci_lc.ESACCILandCoverFractionPlugin(block=6).fetch_period("2022", BBOX)["land_cover_fraction"]
-    fractions = fractions.isel(t=0)
+    ds = esa_cci_lc.ESACCILandCoverFractionPlugin(block=6).fetch_period("2022", BBOX)
+    fractions = ds["land_cover_fraction"].isel(t=0)
 
+    assert ds.rio.crs.to_epsg() == 4326
+    assert ds.t.values[0] == np.datetime64("2022-01-01")
     assert fractions.sizes == {"land_cover_class": 10, "y": 6, "x": 6}
     assert np.allclose(fractions.sel(land_cover_class="cropland").isel(x=slice(0, 3)), 1.0)
     assert np.allclose(fractions.sel(land_cover_class="tree_cover").isel(x=slice(3, None)), 1.0)
@@ -111,7 +110,7 @@ def test_fractions_share_each_cell_between_the_groups(monkeypatch: pytest.Monkey
 def test_years_stop_at_the_last_published_map() -> None:
     import asyncio
 
-    years = asyncio.run(esa_cci_lc.ESACCILandCoverClassPlugin().periods("2020", "2026"))
+    years = asyncio.run(esa_cci_lc.ESACCILandCoverFractionPlugin().periods("2020", "2026"))
 
     assert years == ["2020", "2021", "2022"]
 
@@ -127,15 +126,14 @@ def test_a_declared_fill_value_is_left_out_of_the_fractions(monkeypatch: pytest.
 
     assert np.isnan(cropland.isel(y=0, x=0))  # nothing observed in that cell
     assert np.allclose(cropland.isel(y=0, x=slice(1, None)), 1.0)  # 5 of 6 rows observed, all cropland
-    classes = esa_cci_lc.ESACCILandCoverClassPlugin().fetch_period("2022", BBOX)["lccs_class"].isel(t=0)
-    assert np.isnan(classes.isel(y=0)).all()
+    assert (esa_cci_lc._load_classes("2022", BBOX).isel(y=0) == 0).all()  # read as no data
 
 
 @pytest.mark.parametrize("shape", [(1, 36), (36, 1)], ids=["one-row", "one-column"])
 def test_an_extent_one_pixel_wide_keeps_both_axes(monkeypatch: pytest.MonkeyPatch, shape: tuple[int, int]) -> None:
     monkeypatch.setattr(esa_cci_lc, "_CdsClient", FakeCds(np.full(shape, 130, dtype="uint8"), zipped=False))
 
-    classes = esa_cci_lc.ESACCILandCoverClassPlugin().fetch_period("2022", BBOX)["lccs_class"].isel(t=0)
+    classes = esa_cci_lc._load_classes("2022", BBOX)
 
     assert classes.dims == ("y", "x") and classes.shape == shape
     assert (classes == 130).all()
