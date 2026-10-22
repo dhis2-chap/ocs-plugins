@@ -1,0 +1,106 @@
+{
+  "id": "esacci_landcover_groups",
+  "summary": "ESA CCI land cover in ten groups",
+  "description": "Loads the ESA CCI / C3S land cover classes (esacci_landcover_class_yearly) and merges its 37 classes into ten groups following the IPCC land categories, with shrubland, sparse vegetation and bare land kept apart: cropland, tree_cover, shrubland, grassland, sparse_vegetation, wetland, urban, bare, water and snow_ice. The result is a categorical cube whose classes are the groups, so aggregate_spatial_classes gives each group's share of each feature, or the group covering most of it.\n\nShare of each group per district for 2020, as a process graph:\n\n{\n  \"groups\": {\n    \"process_id\": \"esacci_landcover_groups\",\n    \"arguments\": { \"temporal_extent\": [\"2020-01-01\", \"2020-12-31\"] }\n  },\n  \"share\": {\n    \"process_id\": \"aggregate_spatial_classes\",\n    \"arguments\": {\n      \"data\": { \"from_node\": \"groups\" },\n      \"geometries\": { \"type\": \"FeatureCollection\", \"features\": [ ... ] },\n      \"reducer\": \"share\"\n    }\n  },\n  \"save\": {\n    \"process_id\": \"save_result\",\n    \"arguments\": { \"data\": { \"from_node\": \"share\" }, \"format\": \"CSV\" },\n    \"result\": true\n  }\n}",
+  "parameters": [
+    {
+      "name": "temporal_extent",
+      "description": "Years to load, as [start, end] ISO-8601 dates.",
+      "schema": {
+        "type": "array",
+        "subtype": "temporal-interval"
+      }
+    },
+    {
+      "name": "dataset_id",
+      "description": "The ESA CCI land cover class dataset.",
+      "schema": {
+        "type": "string",
+        "subtype": "collection-id"
+      },
+      "default": "esacci_landcover_class_yearly",
+      "optional": true
+    }
+  ],
+  "process_graph": {
+    "load": {
+      "process_id": "load_collection",
+      "arguments": {
+        "id": {
+          "from_parameter": "dataset_id"
+        },
+        "temporal_extent": {
+          "from_parameter": "temporal_extent"
+        }
+      }
+    },
+    "groups": {
+      "process_id": "remap_classes",
+      "arguments": {
+        "data": {
+          "from_node": "load"
+        },
+        "groups": {
+          "cropland": [
+            10,
+            11,
+            12,
+            20,
+            30,
+            40
+          ],
+          "tree_cover": [
+            50,
+            60,
+            61,
+            62,
+            70,
+            71,
+            72,
+            80,
+            81,
+            82,
+            90,
+            100
+          ],
+          "shrubland": [
+            120,
+            121,
+            122
+          ],
+          "grassland": [
+            110,
+            130
+          ],
+          "sparse_vegetation": [
+            140,
+            150,
+            151,
+            152,
+            153
+          ],
+          "wetland": [
+            160,
+            170,
+            180
+          ],
+          "urban": [
+            190
+          ],
+          "bare": [
+            200,
+            201,
+            202
+          ],
+          "water": [
+            210
+          ],
+          "snow_ice": [
+            220
+          ]
+        }
+      },
+      "result": true
+    }
+  }
+}
