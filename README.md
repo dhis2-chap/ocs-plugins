@@ -77,7 +77,6 @@ which take precedence over the built-ins.
 | `modis_landcover_yearly` | yearly | MODIS MCD12Q1 v061 land cover, IGBP classes, from 2001 (NASA LP DAAC) | Earthdata Login |
 | `worldpop_agesex_global2_100m` | yearly | WorldPop Global2 population by age and sex, 100 m, 2015–2030; slow to ingest, about 40 GeoTIFFs per country-year (WorldPop) | none |
 | `rwi` | yearly | Meta Relative Wealth Index, 2021, for the instance's `extent.country_code`, low- and middle-income countries only (HDX) | none |
-| `copdem90_elevation_static` | static | Copernicus DEM GLO-90 (AWS Open Data); the 30 m DEM is in OCS core | none |
 
 Each template's `description` says more about the dataset, including its known limits. Two to
 note: **the MODIS flood product keeps only about the last 7 days**, so its record starts when it
