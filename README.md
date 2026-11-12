@@ -48,7 +48,7 @@ you would a built-in dataset:
 ```bash
 curl -s -X POST http://localhost:9000/ingestions \
   -H "Content-Type: application/json" \
-  -d '{"dataset_id": "era5land_temperature_max_daily", "start": "2025-06-01", "end": "2025-06-30"}'
+  -d '{"dataset_id": "era5land_soil_moisture_daily", "start": "2025-06-01", "end": "2025-06-30"}'
 ```
 
 An instance can override any template here by putting one with the same `id` in its own
@@ -59,9 +59,6 @@ which take precedence over the built-ins.
 
 | Dataset id | Period | Source | Access |
 |---|---|---|---|
-| `era5land_temperature_min_daily` | daily | ERA5-Land daily statistics (Copernicus CDS) | CDS key |
-| `era5land_temperature_max_daily` | daily | ERA5-Land daily statistics (Copernicus CDS) | CDS key |
-| `era5land_dewpoint_daily` | daily | ERA5-Land daily statistics (Copernicus CDS) | CDS key |
 | `era5land_soil_moisture_daily` | daily | ERA5-Land daily statistics, layer 1, 0–7 cm (Copernicus CDS) | CDS key |
 | `era5land_wind_speed_daily` | daily | ERA5-Land hourly u/v, mean of hourly speeds (Copernicus CDS) | CDS key |
 | `cams_dust_aod_daily`, `cams_pm10_daily`, `cams_pm25_daily` | daily | CAMS EAC4 reanalysis, then CAMS global forecasts (Copernicus ADS) | CDS key, ADS terms and licences accepted |
