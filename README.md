@@ -72,7 +72,6 @@ which take precedence over the built-ins.
 | `modis_lst_day_monthly`, `modis_lst_night_monthly` | monthly | MODIS Terra MOD11A2 v061 day and night land surface temperature, mean of the 8-day composites weighted by their days in the month, from March 2000 (Microsoft Planetary Computer) | none |
 | `modis_ndvi_monthly`, `modis_evi_monthly` | monthly | MODIS MOD13Q1/MYD13Q1 v6.1 (Microsoft Planetary Computer) | none |
 | `dynamic_world_landcover_monthly` | monthly | Dynamic World 10 m land cover, most frequent class per month, from July 2015, about 110 m by default (Google Earth Engine) | Earth Engine account and project |
-| `clms_ndvi_dekadal` | dekadal | Copernicus Land Monitoring Service NDVI 300 m V3, from 2014 (Copernicus Data Space Ecosystem) | CDSE S3 keys |
 | `clms_gpp_dekadal`, `clms_npp_dekadal` | dekadal | Copernicus Land Monitoring Service GPP and NPP 300 m V2, from November 2013, final values only (Copernicus Data Space Ecosystem) | CDSE S3 keys |
 | `esa_worldcover_2021` | yearly | ESA WorldCover 10 m land cover, 2021 (AWS Open Data) | none |
 | `modis_landcover_yearly` | yearly | MODIS MCD12Q1 v061 land cover, IGBP classes, from 2001 (NASA LP DAAC) | Earthdata Login |
