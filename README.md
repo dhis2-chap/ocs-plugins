@@ -48,7 +48,7 @@ you would a built-in dataset:
 ```bash
 curl -s -X POST http://localhost:9000/ingestions \
   -H "Content-Type: application/json" \
-  -d '{"dataset_id": "era5land_temperature_max_daily", "start": "2025-06-01", "end": "2025-06-30"}'
+  -d '{"dataset_id": "era5land_soil_moisture_daily", "start": "2025-06-01", "end": "2025-06-30"}'
 ```
 
 An instance can override any template here by putting one with the same `id` in its own
@@ -59,9 +59,6 @@ which take precedence over the built-ins.
 
 | Dataset id | Period | Source | Access |
 |---|---|---|---|
-| `era5land_temperature_min_daily` | daily | ERA5-Land daily statistics (Copernicus CDS) | CDS key |
-| `era5land_temperature_max_daily` | daily | ERA5-Land daily statistics (Copernicus CDS) | CDS key |
-| `era5land_dewpoint_daily` | daily | ERA5-Land daily statistics (Copernicus CDS) | CDS key |
 | `era5land_soil_moisture_daily` | daily | ERA5-Land daily statistics, layer 1, 0–7 cm (Copernicus CDS) | CDS key |
 | `era5land_wind_speed_daily` | daily | ERA5-Land hourly u/v, mean of hourly speeds (Copernicus CDS) | CDS key |
 | `cams_dust_aod_daily`, `cams_pm10_daily`, `cams_pm25_daily` | daily | CAMS EAC4 reanalysis, then CAMS global forecasts (Copernicus ADS) | CDS key, ADS terms and licences accepted |
@@ -72,13 +69,11 @@ which take precedence over the built-ins.
 | `modis_lst_day_monthly`, `modis_lst_night_monthly` | monthly | MODIS Terra MOD11A2 v061 day and night land surface temperature, mean of the 8-day composites weighted by their days in the month, from March 2000 (Microsoft Planetary Computer) | none |
 | `modis_ndvi_monthly`, `modis_evi_monthly` | monthly | MODIS MOD13Q1/MYD13Q1 v6.1 (Microsoft Planetary Computer) | none |
 | `dynamic_world_landcover_monthly` | monthly | Dynamic World 10 m land cover, most frequent class per month, from July 2015, about 110 m by default (Google Earth Engine) | Earth Engine account and project |
-| `clms_ndvi_dekadal` | dekadal | Copernicus Land Monitoring Service NDVI 300 m V3, from 2014 (Copernicus Data Space Ecosystem) | CDSE S3 keys |
 | `clms_gpp_dekadal`, `clms_npp_dekadal` | dekadal | Copernicus Land Monitoring Service GPP and NPP 300 m V2, from November 2013, final values only (Copernicus Data Space Ecosystem) | CDSE S3 keys |
 | `esa_worldcover_2021` | yearly | ESA WorldCover 10 m land cover, 2021 (AWS Open Data) | none |
 | `modis_landcover_yearly` | yearly | MODIS MCD12Q1 v061 land cover, IGBP classes, from 2001 (NASA LP DAAC) | Earthdata Login |
 | `worldpop_agesex_global2_100m` | yearly | WorldPop Global2 population by age and sex, 100 m, 2015–2030; slow to ingest, about 40 GeoTIFFs per country-year (WorldPop) | none |
 | `rwi` | yearly | Meta Relative Wealth Index, 2021, for the instance's `extent.country_code`, low- and middle-income countries only (HDX) | none |
-| `copdem90_elevation_static` | static | Copernicus DEM GLO-90 (AWS Open Data); the 30 m DEM is in OCS core | none |
 
 Each template's `description` says more about the dataset, including its known limits. Two to
 note: **the MODIS flood product keeps only about the last 7 days**, so its record starts when it

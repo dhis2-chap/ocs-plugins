@@ -2405,7 +2405,7 @@ wheels = [
 [[package]]
 name = "open-climate-service"
 version = "0.1.1"
-source = { git = "https://github.com/dhis2/open-climate-service?branch=main#2c30ad48bd505fd443d7ff94632a3c8c20e08fd9" }
+source = { git = "https://github.com/dhis2/open-climate-service?branch=main#fb02216d3ce07d60d41502aa08a43564b072a6fb" }
 dependencies = [
     { name = "httpx" },
     { name = "pystac" },
@@ -2427,6 +2427,7 @@ server = [
     { name = "iso3166" },
     { name = "jinja2" },
     { name = "joblib" },
+    { name = "jsonschema" },
     { name = "license-expression" },
     { name = "metpy" },
     { name = "netcdf4" },

@@ -25,17 +25,17 @@ from typing import Any, cast
 import numpy as np
 import xarray as xr
 from ecmwf.datastores import Client as _CdsClient
-from open_climate_service.plugins.rasters.era5_land import (
-    _cds_fallback_area,
-    _collapse_expver,
-    _daily_availability_cutoff,
-    _drop_auxiliary_variables,
-    _hourly_availability_cutoff,
-)
 from open_climate_service.streaming import BaseDatasetPlugin, daily_period_ids
 from open_climate_service.transforms.unit_conversion import kelvin_to_celsius
 
 from ocs_plugins._netcdf import load_netcdf
+from ocs_plugins.rasters._era5_land import (
+    cds_fallback_area,
+    collapse_expver,
+    daily_availability_cutoff,
+    drop_auxiliary_variables,
+    hourly_availability_cutoff,
+)
 
 # Short name (as it appears in the downloaded NetCDF) -> CDS request name.
 _DAILY_STAT_VARIABLES: dict[str, str] = {
@@ -98,7 +98,7 @@ class _MonthlyCachedCDSPlugin(BaseDatasetPlugin):
         day = date.fromisoformat(period_id)
         monthly = self._month_cube(day, bbox)
         timestamp = np.datetime64(period_id, "D").astype("datetime64[ns]")
-        return _drop_auxiliary_variables(monthly.sel(t=slice(timestamp, timestamp)), self.variable)
+        return drop_auxiliary_variables(monthly.sel(t=slice(timestamp, timestamp)), self.variable)
 
 
 class ERA5LandCDSDailyStatisticPlugin(_MonthlyCachedCDSPlugin):
@@ -124,14 +124,14 @@ class ERA5LandCDSDailyStatisticPlugin(_MonthlyCachedCDSPlugin):
         self.statistic = statistic
 
     async def periods(self, start: str, end: str) -> list[str]:
-        cutoff = await asyncio.to_thread(_daily_availability_cutoff)
+        cutoff = await asyncio.to_thread(daily_availability_cutoff)
         return daily_period_ids(start, end, cutoff=cutoff)
 
     def _request(self, year: int, month: int, bbox: _BBox) -> dict[str, Any]:
         from open_climate_service import config as api_config
 
         _, last_day = calendar.monthrange(year, month)
-        cutoff = _daily_availability_cutoff()
+        cutoff = daily_availability_cutoff()
         if (cutoff.year, cutoff.month) == (year, month):
             last_day = min(last_day, cutoff.day)
         return {
@@ -142,7 +142,7 @@ class ERA5LandCDSDailyStatisticPlugin(_MonthlyCachedCDSPlugin):
             "daily_statistic": _STATISTICS[self.statistic],
             "time_zone": _cds_time_zone(api_config.get_utc_offset()),
             "frequency": "1_hourly",
-            "area": _cds_fallback_area(bbox),
+            "area": cds_fallback_area(bbox),
             "data_format": "netcdf",
             "download_format": "unarchived",
         }
@@ -152,7 +152,7 @@ class ERA5LandCDSDailyStatisticPlugin(_MonthlyCachedCDSPlugin):
             target = Path(tmp) / "era5land_daily_stat.nc"
             _CdsClient().retrieve("derived-era5-land-daily-statistics", self._request(year, month, bbox), str(target))
             ds = load_netcdf(target)
-        ds = _rename_to_canonical(_collapse_expver(ds[[self.variable]]))
+        ds = _rename_to_canonical(collapse_expver(ds[[self.variable]]))
         if self.variable in _KELVIN_VARIABLES:
             ds = kelvin_to_celsius(ds, {"variable": self.variable})
         return ds
@@ -174,7 +174,7 @@ class ERA5LandCDSDailyWindSpeedPlugin(_MonthlyCachedCDSPlugin):
     async def periods(self, start: str, end: str) -> list[str]:
         from open_climate_service import config as api_config
 
-        cutoff = await asyncio.to_thread(_hourly_availability_cutoff)
+        cutoff = await asyncio.to_thread(hourly_availability_cutoff)
         # Only local days whose last hour has been published.
         last_local = (cutoff.replace(tzinfo=None) + api_config.get_utc_offset() - timedelta(hours=23)).date()
         return daily_period_ids(start, end, cutoff=last_local)
@@ -188,7 +188,7 @@ class ERA5LandCDSDailyWindSpeedPlugin(_MonthlyCachedCDSPlugin):
         last_utc = datetime(year, month, last_day) + timedelta(hours=23) - offset
         # Never ask for hours the CDS has not published; the partial last day comes out NaN
         # and is not offered by periods() anyway.
-        last_utc = min(last_utc, _hourly_availability_cutoff().replace(tzinfo=None))
+        last_utc = min(last_utc, hourly_availability_cutoff().replace(tzinfo=None))
         hourly = self._fetch_hourly(first_utc, last_utc, bbox)
         speed = cast(xr.DataArray, np.hypot(hourly["u10"], hourly["v10"]))
         # Shift timestamps into local time, then a plain calendar-day resample is a local day.
@@ -215,7 +215,7 @@ class ERA5LandCDSDailyWindSpeedPlugin(_MonthlyCachedCDSPlugin):
                 "month": f"{month_start.month:02d}",
                 "day": [f"{d:02d}" for d in days],
                 "time": [f"{h:02d}:00" for h in range(24)],
-                "area": _cds_fallback_area(bbox),
+                "area": cds_fallback_area(bbox),
                 "data_format": "netcdf",
                 "download_format": "unarchived",
             }
@@ -223,7 +223,7 @@ class ERA5LandCDSDailyWindSpeedPlugin(_MonthlyCachedCDSPlugin):
                 target = Path(tmp) / "era5land_wind.nc"
                 _CdsClient().retrieve("reanalysis-era5-land", params, str(target))
                 raw = load_netcdf(target)[["u10", "v10"]]
-            cubes.append(_rename_to_canonical(_collapse_expver(raw)))
+            cubes.append(_rename_to_canonical(collapse_expver(raw)))
             month_start = (month_start + timedelta(days=32)).replace(day=1)
         ds = xr.concat(cubes, dim="t") if len(cubes) > 1 else cubes[0]
         first_ns = np.datetime64(first, "h").astype("datetime64[ns]")
